@@ -1,5 +1,4 @@
-const API_BASE = '';
-const API_KEY = 'wgQpGA4bX__yTuz71T6TdTHEpTSeDuGIhq58P48fG7Q';
+const API_PROXY = '/api/proxy';
 
 const COURSES = {
   'ap-geo': {
@@ -94,12 +93,9 @@ function goHome() {
 
 async function fetchBatch(subject, units) {
   const unit = pickRandomUnit(units);
-  const res = await fetch(`${API_BASE}/v1/items`, {
+  const res = await fetch(API_PROXY, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       subject,
       scope: { unit_code: unit },
