@@ -150,8 +150,20 @@ function initCrossOut() {
     const btn = e.target.closest('.option-btn');
     if (!btn || answered) return;
     e.preventDefault();
-    btn.classList.toggle('crossed-out');
+    toggleCrossOut(btn);
   });
+}
+
+function toggleCrossOut(btn) {
+  if (answered) return;
+  btn.classList.toggle('crossed-out');
+  if (btn.classList.contains('crossed-out')) {
+    btn.classList.remove('selected');
+    if (selectedOption === parseInt(btn.dataset.index)) {
+      selectedOption = -1;
+      document.getElementById('btn-check-answer').classList.add('hidden');
+    }
+  }
 }
 
 // ── Screen management ──
@@ -387,7 +399,8 @@ function renderQuestion() {
     .map((opt, i) =>
       `<button class="option-btn" data-index="${i}" onclick="selectAnswer(${i})">
         <span class="option-letter">${letters[i]}</span>
-        <span>${escapeHtml(opt)}</span>
+        <span class="option-text">${escapeHtml(opt)}</span>
+        <span class="option-cross" onclick="event.stopPropagation(); toggleCrossOut(this.parentElement);" title="Cross out">&times;</span>
       </button>`
     )
     .join('');
@@ -414,6 +427,8 @@ function renderQuestion() {
 
 function selectAnswer(index) {
   if (answered) return;
+  const btn = document.querySelectorAll('.option-btn')[index];
+  if (btn && btn.classList.contains('crossed-out')) return;
 
   selectedOption = index;
 

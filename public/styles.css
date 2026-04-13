@@ -572,12 +572,46 @@ body {
   background: var(--surface-2);
 }
 
+.option-text {
+  flex: 1;
+}
+
+.option-cross {
+  margin-left: auto;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.option-btn:hover .option-cross {
+  opacity: 0.5;
+}
+
+.option-cross:hover {
+  opacity: 1 !important;
+  color: var(--incorrect);
+}
+
 .option-btn.crossed-out {
-  opacity: 0.4;
+  opacity: 0.35;
+}
+.option-btn.crossed-out .option-text {
   text-decoration: line-through;
 }
 .option-btn.crossed-out .option-letter {
   text-decoration: line-through;
+}
+.option-btn.crossed-out .option-cross {
+  opacity: 0.7;
+  color: var(--incorrect);
+}
+
+.option-btn.disabled .option-cross {
+  display: none;
 }
 
 .option-letter {
