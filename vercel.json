@@ -1,7 +1,6 @@
 {
-  "buildCommand": "",
   "outputDirectory": "public",
   "rewrites": [
-    { "source": "/api/proxy", "destination": "/api/proxy" }
+    { "source": "/api/:path*", "destination": "/api/:path*" }
   ]
 }
