@@ -24,6 +24,27 @@ export default async function handler(req, res) {
       )
     `;
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS answers (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        question_id TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        unit_code TEXT,
+        topic_code TEXT,
+        difficulty TEXT,
+        stem TEXT NOT NULL,
+        options JSONB NOT NULL,
+        correct_index INTEGER NOT NULL,
+        selected_index INTEGER NOT NULL,
+        is_correct BOOLEAN NOT NULL,
+        time_ms INTEGER NOT NULL,
+        stimulus JSONB,
+        explanation TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
     return res.status(200).json({ ok: true, message: 'Tables created' });
   } catch (err) {
     return res.status(500).json({ error: err.message });

@@ -101,6 +101,7 @@ let totalAnswered = 0;
 let totalCorrect = 0;
 let answered = false;
 let fetching = false;
+let questionStartTime = 0;
 
 // ── Tools state ──
 let highlightMode = false;
@@ -346,6 +347,7 @@ function renderQuestion() {
   }
 
   answered = false;
+  questionStartTime = Date.now();
   const q = questionQueue[0];
 
   document.getElementById('exam-stimulus-title').textContent = `Q${currentIndex + 1} Stimulus`;
@@ -412,6 +414,7 @@ function selectAnswer(index) {
 
   const q = questionQueue[0];
   const isCorrect = index === q.correct;
+  const timeMs = Date.now() - questionStartTime;
   totalAnswered++;
   if (isCorrect) totalCorrect++;
 
@@ -430,6 +433,30 @@ function selectAnswer(index) {
 
   const btnNext = document.getElementById('btn-next');
   if (btnNext) btnNext.disabled = false;
+
+  saveAnswer(q, index, isCorrect, timeMs);
+}
+
+function saveAnswer(q, selectedIndex, isCorrect, timeMs) {
+  fetch('/api/answer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      question_id: q.id,
+      subject: COURSES[courseKey]?.subject || '',
+      unit_code: q.unitCode,
+      topic_code: q.topicCode,
+      difficulty: q.difficulty,
+      stem: q.stem,
+      options: q.options,
+      correct_index: q.correct,
+      selected_index: selectedIndex,
+      is_correct: isCorrect,
+      time_ms: timeMs,
+      stimulus: q.stimulus || null,
+      explanation: q.explanation,
+    }),
+  }).catch(err => console.error('Failed to save answer:', err));
 }
 
 // ── Navigation ──
