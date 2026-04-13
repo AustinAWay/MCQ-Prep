@@ -2,7 +2,6 @@ const API_PROXY = '/api/proxy';
 const AUTH_API = '/api/auth';
 
 let currentUser = null;
-let authMode = 'login';
 
 // ── Auth ──
 
@@ -25,37 +24,21 @@ async function checkSession() {
   }
 }
 
-function toggleAuthMode() {
-  authMode = authMode === 'login' ? 'signup' : 'login';
-  document.getElementById('auth-subtitle').textContent =
-    authMode === 'login' ? 'Sign in to start practicing' : 'Create your account';
-  document.getElementById('auth-submit').textContent =
-    authMode === 'login' ? 'Sign In' : 'Sign Up';
-  document.getElementById('auth-toggle-text').textContent =
-    authMode === 'login' ? "Don't have an account?" : 'Already have an account?';
-  document.getElementById('auth-toggle-btn').textContent =
-    authMode === 'login' ? 'Sign Up' : 'Sign In';
-  document.getElementById('auth-name-field').classList.toggle('hidden', authMode === 'login');
-  document.getElementById('auth-error').classList.add('hidden');
-}
-
 async function handleAuth(e) {
   e.preventDefault();
   const btn = document.getElementById('auth-submit');
   const errEl = document.getElementById('auth-error');
   errEl.classList.add('hidden');
   btn.disabled = true;
-  btn.textContent = authMode === 'login' ? 'Signing in...' : 'Creating account...';
+  btn.textContent = 'Loading...';
 
   const email = document.getElementById('auth-email').value.trim();
-  const password = document.getElementById('auth-password').value;
-  const name = document.getElementById('auth-name').value.trim();
 
   try {
     const res = await fetch(AUTH_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: authMode, email, password, name }),
+      body: JSON.stringify({ action: 'enter', email }),
     });
     const data = await res.json();
 
@@ -63,7 +46,7 @@ async function handleAuth(e) {
       errEl.textContent = data.error || 'Something went wrong';
       errEl.classList.remove('hidden');
       btn.disabled = false;
-      btn.textContent = authMode === 'login' ? 'Sign In' : 'Sign Up';
+      btn.textContent = 'Continue';
       return;
     }
 
@@ -73,7 +56,7 @@ async function handleAuth(e) {
     errEl.textContent = 'Network error. Please try again.';
     errEl.classList.remove('hidden');
     btn.disabled = false;
-    btn.textContent = authMode === 'login' ? 'Sign In' : 'Sign Up';
+    btn.textContent = 'Continue';
   }
 }
 

@@ -1,5 +1,4 @@
 import { neon } from '@neondatabase/serverless';
-import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
 function parseCookies(cookieHeader) {
@@ -24,64 +23,36 @@ export default async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL);
   const { action } = req.body;
 
-  // ── Sign Up ──
-  if (action === 'signup') {
-    const { email, password, name } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+  // ── Enter (sign up or sign in by email) ──
+  if (action === 'enter') {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
     }
 
-    const existing = await sql`SELECT id FROM users WHERE email = ${email.toLowerCase().trim()}`;
-    if (existing.length > 0) {
-      return res.status(409).json({ error: 'An account with this email already exists' });
-    }
+    const normalized = email.toLowerCase().trim();
 
-    const hash = await bcrypt.hash(password, 10);
-    const rows = await sql`
-      INSERT INTO users (email, password_hash, name)
-      VALUES (${email.toLowerCase().trim()}, ${hash}, ${name || ''})
-      RETURNING id, email, name
-    `;
-    const user = rows[0];
+    let rows = await sql`SELECT id, email FROM users WHERE email = ${normalized}`;
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const thirtyDays = 30 * 24 * 60 * 60;
-    await sql`
-      INSERT INTO sessions (user_id, token, expires_at)
-      VALUES (${user.id}, ${token}, NOW() + INTERVAL '30 days')
-    `;
-
-    res.setHeader('Set-Cookie', sessionCookie(token, thirtyDays));
-    return res.status(200).json({ user: { id: user.id, email: user.email, name: user.name } });
-  }
-
-  // ── Log In ──
-  if (action === 'login') {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    const rows = await sql`SELECT id, email, name, password_hash FROM users WHERE email = ${email.toLowerCase().trim()}`;
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      rows = await sql`
+        INSERT INTO users (email, password_hash, name)
+        VALUES (${normalized}, '', ${normalized.split('@')[0]})
+        RETURNING id, email
+      `;
     }
 
     const user = rows[0];
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
     const token = crypto.randomBytes(32).toString('hex');
     const thirtyDays = 30 * 24 * 60 * 60;
+
     await sql`
       INSERT INTO sessions (user_id, token, expires_at)
       VALUES (${user.id}, ${token}, NOW() + INTERVAL '30 days')
     `;
 
     res.setHeader('Set-Cookie', sessionCookie(token, thirtyDays));
-    return res.status(200).json({ user: { id: user.id, email: user.email, name: user.name } });
+    return res.status(200).json({ user: { id: user.id, email: user.email } });
   }
 
   // ── Session Check ──
@@ -93,7 +64,7 @@ export default async function handler(req, res) {
     }
 
     const rows = await sql`
-      SELECT u.id, u.email, u.name
+      SELECT u.id, u.email
       FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token = ${token} AND s.expires_at > NOW()
     `;

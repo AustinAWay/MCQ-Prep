@@ -14,30 +14,17 @@
       <div class="auth-container">
         <div class="auth-card">
           <h1 class="auth-title">AP Exam Prep</h1>
-          <p class="auth-subtitle" id="auth-subtitle">Sign in to start practicing</p>
+          <p class="auth-subtitle">Enter your email to start practicing</p>
 
           <div id="auth-error" class="auth-error hidden"></div>
 
           <form id="auth-form" onsubmit="handleAuth(event)">
-            <div id="auth-name-field" class="auth-field hidden">
-              <label for="auth-name">Name</label>
-              <input type="text" id="auth-name" placeholder="Your name" autocomplete="name">
-            </div>
             <div class="auth-field">
               <label for="auth-email">Email</label>
               <input type="email" id="auth-email" placeholder="you@school.edu" autocomplete="email" required>
             </div>
-            <div class="auth-field">
-              <label for="auth-password">Password</label>
-              <input type="password" id="auth-password" placeholder="Enter your password" autocomplete="current-password" required>
-            </div>
-            <button type="submit" class="auth-submit" id="auth-submit">Sign In</button>
+            <button type="submit" class="auth-submit" id="auth-submit">Continue</button>
           </form>
-
-          <p class="auth-toggle">
-            <span id="auth-toggle-text">Don't have an account?</span>
-            <button type="button" class="auth-toggle-btn" id="auth-toggle-btn" onclick="toggleAuthMode()">Sign Up</button>
-          </p>
         </div>
       </div>
     </div>
