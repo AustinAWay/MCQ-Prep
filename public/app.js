@@ -319,6 +319,19 @@ function renderStimulus(stimulus) {
   const attribution = stimulus.source_attribution || stimulus.source_ref || '';
   const content = stimulus.content || '';
 
+  const chartData = tryParseChartJson(content);
+  if (chartData) {
+    const chartId = 'stimulus-chart-' + Date.now();
+    setTimeout(() => renderChart(chartId, chartData), 50);
+    return `
+      <div class="stimulus-box">
+        ${chartData.title ? `<div class="stimulus-chart-title">${escapeHtml(chartData.title)}</div>` : ''}
+        <canvas id="${chartId}" class="stimulus-chart-canvas"></canvas>
+        ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
+      </div>
+    `;
+  }
+
   let rendered;
   if (content.includes('<table') || content.includes('<tr') || content.includes('<div')) {
     rendered = content;
@@ -334,6 +347,94 @@ function renderStimulus(stimulus) {
       ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
     </div>
   `;
+}
+
+function tryParseChartJson(content) {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith('{') || !trimmed.includes('chart_type')) return null;
+  try {
+    const data = JSON.parse(trimmed);
+    if (data.chart_type && data.data) return data;
+  } catch {}
+  return null;
+}
+
+const CHART_COLORS = [
+  '#3b82f6', '#ef4444', '#22c55e', '#f59e0b',
+  '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
+];
+
+function renderChart(canvasId, chartData) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  const type = chartData.chart_type === 'scatter' ? 'scatter'
+    : chartData.chart_type === 'bar' ? 'bar' : 'line';
+
+  const xLabels = chartData.data[0]?.values?.map((_, i) => {
+    if (chartData.x_label === 'Year' && chartData.data[0].values.length === 13) {
+      return 2010 + i;
+    }
+    return i;
+  });
+
+  let datasets;
+
+  if (type === 'scatter') {
+    datasets = chartData.data.map((series, idx) => ({
+      label: series.label,
+      data: [{ x: series.values[0], y: series.values[1] }],
+      backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
+      pointRadius: 8,
+      pointHoverRadius: 10,
+    }));
+  } else {
+    datasets = chartData.data.map((series, idx) => ({
+      label: series.label,
+      data: series.values,
+      borderColor: CHART_COLORS[idx % CHART_COLORS.length],
+      backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] + '20',
+      fill: false,
+      tension: 0.3,
+      pointRadius: 3,
+      yAxisID: idx === chartData.data.length - 1 && chartData.y_label_right ? 'y1' : 'y',
+    }));
+  }
+
+  const scales = {};
+  if (type !== 'scatter') {
+    scales.x = { title: { display: !!chartData.x_label, text: chartData.x_label || '' } };
+    scales.y = {
+      title: { display: !!chartData.y_label_left || !!chartData.y_label, text: chartData.y_label_left || chartData.y_label || '' },
+      position: 'left',
+    };
+    if (chartData.y_label_right) {
+      scales.y1 = {
+        title: { display: true, text: chartData.y_label_right },
+        position: 'right',
+        grid: { drawOnChartArea: false },
+      };
+    }
+  } else {
+    scales.x = { title: { display: !!chartData.x_label, text: chartData.x_label || '' } };
+    scales.y = { title: { display: !!chartData.y_label, text: chartData.y_label || '' } };
+  }
+
+  new Chart(canvas, {
+    type,
+    data: {
+      labels: type !== 'scatter' ? xLabels : undefined,
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16, font: { size: 11 } } },
+      },
+      scales,
+    },
+  });
 }
 
 function renderMarkdownTable(text) {
