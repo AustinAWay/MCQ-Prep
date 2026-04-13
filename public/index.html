@@ -11,10 +11,12 @@
 
     <!-- Auth Screen -->
     <div id="screen-auth" class="screen active">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+      <div class="gradient-orb orb-4"></div>
+      <div class="gradient-orb orb-5"></div>
       <div class="auth-container">
-        <div class="gradient-orb orb-1"></div>
-        <div class="gradient-orb orb-2"></div>
-        <div class="gradient-orb orb-3"></div>
         <div class="auth-card">
           <h1 class="auth-title">AP Exam Prep</h1>
           <p class="auth-subtitle">Enter your email to start practicing</p>
@@ -34,36 +36,29 @@
 
     <!-- Course Selection Screen -->
     <div id="screen-home" class="screen">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+      <div class="gradient-orb orb-4"></div>
+      <div class="gradient-orb orb-5"></div>
+      <button class="sign-out-btn" onclick="logout()">Sign Out</button>
       <div class="home-container">
-        <div class="gradient-orb orb-1"></div>
-        <div class="gradient-orb orb-2"></div>
-        <div class="gradient-orb orb-3"></div>
-        <div class="home-header">
-          <div></div>
-          <button class="sign-out-btn" onclick="logout()">Sign Out</button>
-        </div>
         <div class="hero">
           <h1>AP Exam Prep</h1>
           <p class="subtitle">Randomized practice questions to keep you sharp</p>
         </div>
         <div class="course-grid">
           <button class="course-card" data-course="ap-geo" onclick="selectCourse('ap-geo')">
-            <div class="course-icon">🌍</div>
             <h2>AP Human Geography</h2>
             <p class="course-desc">Population, culture, political organization, agriculture, urbanization, and industrialization</p>
-            <span class="question-count" id="count-ap-geo"></span>
           </button>
           <button class="course-card" data-course="ap-world" onclick="selectCourse('ap-world')">
-            <div class="course-icon">📜</div>
             <h2>AP World History</h2>
             <p class="course-desc">Global interactions from 1200 CE to the present across civilizations and eras</p>
-            <span class="question-count" id="count-ap-world"></span>
           </button>
           <button class="course-card" data-course="apush" onclick="selectCourse('apush')">
-            <div class="course-icon">🇺🇸</div>
             <h2>AP U.S. History</h2>
             <p class="course-desc">American history from pre-Columbian societies through the modern era</p>
-            <span class="question-count" id="count-apush"></span>
           </button>
         </div>
       </div>
@@ -89,24 +84,24 @@
 
     <!-- Quiz Screen -->
     <div id="screen-quiz" class="screen">
-      <!-- Header Bar -->
+      <!-- Header Bar (dark, matching CB exam) -->
       <div class="exam-header">
         <div class="exam-header-left">
-          <button class="exam-directions-btn" onclick="goHome()">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <button class="exam-hdr-btn" onclick="goHome()">
             Directions
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
         <div class="exam-header-center">
-          <span id="course-label" class="exam-course-label">Multiple Choice</span>
+          <span id="course-label" class="exam-header-label">Multiple Choice</span>
         </div>
         <div class="exam-header-right">
-          <button class="exam-tool-btn" id="btn-highlight" onclick="toggleHighlightMode()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <button class="exam-hdr-btn" id="btn-highlight" onclick="toggleHighlightMode()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Highlight
           </button>
-          <button class="exam-tool-btn" id="btn-notes" onclick="toggleNotesPanel()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <button class="exam-hdr-btn" id="btn-notes" onclick="toggleNotesPanel()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Notes
           </button>
         </div>
@@ -144,10 +139,6 @@
                   <p id="explanation-text"></p>
                 </div>
 
-                <button class="btn-next-inline hidden" id="btn-next-inline" onclick="nextQuestion()">
-                  Next Question
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
               </div>
             </div>
           </div>
@@ -163,13 +154,17 @@
         </div>
       </div>
 
-      <!-- Footer Bar -->
+      <!-- Footer Bar (dark, matching CB exam) -->
       <div class="exam-footer">
         <div class="exam-footer-left">
           <span class="exam-user-email" id="exam-user-email"></span>
         </div>
+        <div class="exam-footer-center">
+          <div class="exam-progress-dots" id="exam-progress-dots"></div>
+          <span class="exam-footer-pill" id="exam-footer-pill">Question 1</span>
+        </div>
         <div class="exam-footer-right">
-          <span class="exam-q-count" id="exam-q-count">Q1</span>
+          <button class="exam-footer-btn exam-footer-next" id="btn-next" onclick="nextQuestion()">Next</button>
         </div>
       </div>
     </div>

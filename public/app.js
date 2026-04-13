@@ -136,10 +136,6 @@ function escapeHtml(str) {
 // ── Init ──
 
 function init() {
-  Object.keys(COURSES).forEach(key => {
-    const el = document.getElementById(`count-${key}`);
-    if (el) el.textContent = 'API-powered questions';
-  });
   initDivider();
   initHighlighter();
   initNotes();
@@ -384,13 +380,15 @@ function renderQuestion() {
     .join('');
 
   document.getElementById('explanation-box').classList.add('hidden');
-  document.getElementById('btn-next-inline').classList.add('hidden');
 
   // Footer
   const emailEl = document.getElementById('exam-user-email');
   if (emailEl && currentUser) emailEl.textContent = currentUser.email;
-  const qCountEl = document.getElementById('exam-q-count');
-  if (qCountEl) qCountEl.textContent = `Q${currentIndex + 1}`;
+  const pillEl = document.getElementById('exam-footer-pill');
+  if (pillEl) pillEl.textContent = `Question ${currentIndex + 1}`;
+
+  const btnNext = document.getElementById('btn-next');
+  if (btnNext) btnNext.disabled = true;
 
   // Notes: restore for this question
   const ta = document.getElementById('notes-textarea');
@@ -430,7 +428,8 @@ function selectAnswer(index) {
   document.getElementById('explanation-text').textContent = q.explanation;
   explBox.classList.remove('hidden');
 
-  document.getElementById('btn-next-inline').classList.remove('hidden');
+  const btnNext = document.getElementById('btn-next');
+  if (btnNext) btnNext.disabled = false;
 }
 
 // ── Navigation ──
@@ -441,6 +440,7 @@ function nextQuestion() {
   currentIndex++;
   renderQuestion();
 }
+
 
 // ── Highlight Tool ──
 
@@ -459,23 +459,35 @@ function toggleHighlightMode() {
 }
 
 function initHighlighter() {
-  document.addEventListener('mouseup', () => {
+  document.addEventListener('mouseup', (e) => {
     if (!highlightMode) return;
+
+    const examBody = document.querySelector('.exam-body-wrapper');
+    if (!examBody) return;
+
+    // If clicking directly on an existing highlight, remove it
+    const clickedMark = e.target.closest('mark');
+    if (clickedMark && examBody.contains(clickedMark)) {
+      const parent = clickedMark.parentNode;
+      while (clickedMark.firstChild) {
+        parent.insertBefore(clickedMark.firstChild, clickedMark);
+      }
+      parent.removeChild(clickedMark);
+      parent.normalize();
+      return;
+    }
 
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
 
     const range = sel.getRangeAt(0);
     const container = range.commonAncestorContainer;
-    const examBody = document.querySelector('.exam-body-wrapper');
-    if (!examBody || !examBody.contains(container)) return;
+    if (!examBody.contains(container)) return;
 
     try {
       const mark = document.createElement('mark');
       range.surroundContents(mark);
     } catch {
-      // surroundContents fails if selection spans multiple elements;
-      // fall back to execCommand
       document.execCommand('hiliteColor', false, '#fef08a');
     }
 
