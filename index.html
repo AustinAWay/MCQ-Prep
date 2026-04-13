@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AP Exam Prep</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Course Selection Screen -->
+    <div id="screen-home" class="screen active">
+      <div class="home-container">
+        <div class="hero">
+          <h1>AP Exam Prep</h1>
+          <p class="subtitle">Randomized practice questions to keep you sharp</p>
+        </div>
+        <div class="course-grid">
+          <button class="course-card" data-course="ap-geo" onclick="selectCourse('ap-geo')">
+            <div class="course-icon">🌍</div>
+            <h2>AP Human Geography</h2>
+            <p class="course-desc">Population, culture, political organization, agriculture, urbanization, and industrialization</p>
+            <span class="question-count" id="count-ap-geo"></span>
+          </button>
+          <button class="course-card" data-course="ap-world" onclick="selectCourse('ap-world')">
+            <div class="course-icon">📜</div>
+            <h2>AP World History</h2>
+            <p class="course-desc">Global interactions from 1200 CE to the present across civilizations and eras</p>
+            <span class="question-count" id="count-ap-world"></span>
+          </button>
+          <button class="course-card" data-course="apush" onclick="selectCourse('apush')">
+            <div class="course-icon">🇺🇸</div>
+            <h2>AP U.S. History</h2>
+            <p class="course-desc">American history from pre-Columbian societies through the modern era</p>
+            <span class="question-count" id="count-apush"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="screen-loading" class="screen">
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p id="loading-message">Loading questions...</p>
+      </div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="screen-error" class="screen">
+      <div class="error-container">
+        <div class="error-icon">!</div>
+        <h2>Something went wrong</h2>
+        <p id="error-message"></p>
+        <button class="btn-primary" onclick="goHome()">Back to Courses</button>
+      </div>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="screen-quiz" class="screen">
+      <!-- Header Bar -->
+      <div class="exam-header">
+        <div class="exam-header-left">
+          <button class="exam-directions-btn" onclick="goHome()">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Directions
+          </button>
+        </div>
+        <div class="exam-header-center">
+          <span id="course-label" class="exam-course-label">Multiple Choice</span>
+        </div>
+        <div class="exam-header-right"></div>
+      </div>
+
+      <!-- Split Panel Body -->
+      <div class="exam-body">
+        <!-- Left: Stimulus -->
+        <div class="exam-left" id="exam-left">
+          <div class="exam-panel-title" id="exam-stimulus-title">Q1 Stimulus</div>
+          <div class="exam-stimulus-scroll" id="stimulus-container"></div>
+        </div>
+
+        <!-- Draggable Divider -->
+        <div class="exam-divider" id="exam-divider">
+          <div class="exam-divider-handle">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+
+        <!-- Right: Question -->
+        <div class="exam-right" id="exam-right">
+          <div class="exam-question-scroll">
+            <div class="exam-question-header">
+              <span class="exam-q-badge" id="exam-q-badge">1</span>
+            </div>
+
+            <div class="exam-question-body">
+              <h2 class="question-text" id="question-text"></h2>
+              <div class="options-list" id="options-list"></div>
+
+              <div class="explanation-box hidden" id="explanation-box">
+                <div class="explanation-icon" id="explanation-icon"></div>
+                <p id="explanation-text"></p>
+              </div>
+
+              <button class="btn-next-inline hidden" id="btn-next-inline" onclick="nextQuestion()">
+                Next Question
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

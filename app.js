@@ -1,0 +1,400 @@
+const API_BASE = '';
+const API_KEY = 'wgQpGA4bX__yTuz71T6TdTHEpTSeDuGIhq58P48fG7Q';
+
+const COURSES = {
+  'ap-geo': {
+    name: 'AP Human Geography',
+    subject: 'ap-human-geography',
+    units: ['1','2','3','4','5','6','7'],
+  },
+  'ap-world': {
+    name: 'AP World History',
+    subject: 'ap-world-history',
+    units: ['1','2','3','4','5','6','7','8','9'],
+  },
+  'apush': {
+    name: 'AP U.S. History',
+    subject: 'ap-us-history',
+    units: ['1','2','3','4','5','6','7','8','9'],
+  },
+};
+
+const BATCH_SIZE = 5;
+const REFILL_THRESHOLD = 3;
+
+let currentCourse = null;
+let courseKey = null;
+let questionQueue = [];
+let seenIds = new Set();
+let stimuliMap = {};
+let currentIndex = 0;
+let totalAnswered = 0;
+let totalCorrect = 0;
+let answered = false;
+let fetching = false;
+
+// ── Utilities ──
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickRandomUnit(units) {
+  return units[Math.floor(Math.random() * units.length)];
+}
+
+function pickRandomDifficulty() {
+  const d = ['easy', 'medium', 'medium', 'hard'];
+  return d[Math.floor(Math.random() * d.length)];
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ── Init ──
+
+function init() {
+  Object.keys(COURSES).forEach(key => {
+    const el = document.getElementById(`count-${key}`);
+    if (el) el.textContent = 'API-powered questions';
+  });
+  initDivider();
+}
+
+// ── Screen management ──
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen-${id}`).classList.add('active');
+}
+
+function showLoading(message) {
+  document.getElementById('loading-message').textContent = message;
+  showScreen('loading');
+}
+
+function showError(message) {
+  document.getElementById('error-message').textContent = message;
+  showScreen('error');
+}
+
+function goHome() {
+  showScreen('home');
+}
+
+// ── API ──
+
+async function fetchBatch(subject, units) {
+  const unit = pickRandomUnit(units);
+  const res = await fetch(`${API_BASE}/v1/items`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+    },
+    body: JSON.stringify({
+      subject,
+      scope: { unit_code: unit },
+      count: BATCH_SIZE,
+      difficulty: pickRandomDifficulty(),
+      item_type: 'mcq',
+    }),
+  });
+  if (!res.ok) throw new Error(`API returned ${res.status}`);
+  return res.json();
+}
+
+function normalizeItem(item, stimuli) {
+  const stim = item.stimulus || (item.stimulus_id && stimuli[item.stimulus_id]) || null;
+  const options = item.options.map(o => o.text);
+  const letters = item.options.map(o => o.label);
+  const correctIndex = letters.indexOf(item.correct_answer);
+
+  return {
+    id: item.id,
+    stem: item.stem,
+    options,
+    correct: correctIndex,
+    explanation: item.explanation || '',
+    stimulus: stim,
+    difficulty: item.difficulty,
+    unitCode: item.unit_code,
+    topicCode: item.topic_code,
+  };
+}
+
+async function refillQueue() {
+  if (fetching) return;
+  fetching = true;
+  try {
+    const course = COURSES[courseKey];
+    const result = await fetchBatch(course.subject, course.units);
+
+    if (result.stimuli) {
+      result.stimuli.forEach(s => { stimuliMap[s.id] = s; });
+    }
+
+    if (result.items) {
+      const newItems = result.items
+        .filter(item => !seenIds.has(item.id))
+        .map(item => normalizeItem(item, stimuliMap));
+
+      newItems.forEach(q => seenIds.add(q.id));
+      questionQueue.push(...newItems);
+    }
+  } catch (err) {
+    console.error('Background fetch failed:', err);
+  }
+  fetching = false;
+}
+
+// ── Quiz lifecycle ──
+
+function selectCourse(key) {
+  courseKey = key;
+  currentCourse = key;
+  startQuiz(key);
+}
+
+async function startQuiz(key) {
+  const course = COURSES[key];
+  showLoading(`Loading ${course.name} questions...`);
+
+  questionQueue = [];
+  seenIds = new Set();
+  stimuliMap = {};
+  currentIndex = 0;
+  totalAnswered = 0;
+  totalCorrect = 0;
+
+  try {
+    const units = shuffle(course.units).slice(0, 3);
+    const results = await Promise.all(
+      units.map(u => fetchBatch(course.subject, [u]))
+    );
+
+    for (const r of results) {
+      if (r.stimuli) r.stimuli.forEach(s => { stimuliMap[s.id] = s; });
+      if (r.items) {
+        const normalized = r.items
+          .filter(item => !seenIds.has(item.id))
+          .map(item => normalizeItem(item, stimuliMap));
+        normalized.forEach(q => seenIds.add(q.id));
+        questionQueue.push(...normalized);
+      }
+    }
+
+    questionQueue = shuffle(questionQueue);
+
+    if (questionQueue.length === 0) throw new Error('No questions returned from the API.');
+
+    document.getElementById('course-label').textContent = course.name;
+    showScreen('quiz');
+    renderQuestion();
+  } catch (err) {
+    console.error('Failed to load questions:', err);
+    showError(err.message);
+  }
+}
+
+// ── Stimulus rendering ──
+
+function renderStimulus(stimulus) {
+  if (!stimulus) return '';
+
+  let typeLabel = 'Source';
+  const t = stimulus.type || stimulus.stimulus_type || '';
+  if (t === 'primary_source') typeLabel = 'Primary Source';
+  else if (t === 'secondary_source') typeLabel = 'Secondary Source';
+  else if (t === 'data_table') typeLabel = 'Data';
+  else if (t === 'graph') typeLabel = 'Graph';
+  else if (t === 'map') typeLabel = 'Map';
+  else if (t === 'scenario') typeLabel = 'Scenario';
+  else if (t) typeLabel = t.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+
+  const attribution = stimulus.source_attribution || stimulus.source_ref || '';
+  const content = stimulus.content || '';
+  const isTable = content.includes('<table') || (content.includes('|') && content.includes('\n'));
+  const rendered = isTable && content.includes('|') ? renderMarkdownTable(content) : escapeHtml(content);
+
+  return `
+    <div class="stimulus-box">
+      <div class="stimulus-label">${typeLabel}</div>
+      <div class="stimulus-content">${rendered}</div>
+      ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderMarkdownTable(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  if (lines.length < 2) return escapeHtml(text);
+  const parseRow = line => line.split('|').map(c => c.trim()).filter(c => c);
+  const isSep = line => /^[\s|:-]+$/.test(line);
+  let html = '<table class="stimulus-table">';
+  let inHeader = true;
+  for (const line of lines) {
+    if (isSep(line)) { inHeader = false; continue; }
+    const cells = parseRow(line);
+    const tag = inHeader ? 'th' : 'td';
+    html += '<tr>' + cells.map(c => `<${tag}>${escapeHtml(c)}</${tag}>`).join('') + '</tr>';
+    if (inHeader) inHeader = false;
+  }
+  return html + '</table>';
+}
+
+// ── Question rendering ──
+
+function renderQuestion() {
+  if (questionQueue.length === 0) {
+    showLoading('Loading more questions...');
+    refillQueue().then(() => {
+      if (questionQueue.length > 0) {
+        showScreen('quiz');
+        renderQuestion();
+      } else {
+        showError('Could not load more questions. Please try again.');
+      }
+    });
+    return;
+  }
+
+  answered = false;
+  const q = questionQueue[0];
+
+  document.getElementById('exam-stimulus-title').textContent = `Q${currentIndex + 1} Stimulus`;
+  document.getElementById('exam-q-badge').textContent = currentIndex + 1;
+
+  const examLeft = document.getElementById('exam-left');
+  const examDivider = document.getElementById('exam-divider');
+  const examRight = document.getElementById('exam-right');
+
+  if (q.stimulus && q.stimulus.content) {
+    examLeft.classList.remove('hidden-panel');
+    examDivider.classList.remove('hidden-panel');
+    examRight.classList.remove('full-width');
+    document.getElementById('stimulus-container').innerHTML = renderStimulus(q.stimulus);
+  } else {
+    examLeft.classList.add('hidden-panel');
+    examDivider.classList.add('hidden-panel');
+    examRight.classList.add('full-width');
+    document.getElementById('stimulus-container').innerHTML = '';
+  }
+
+  document.getElementById('question-text').textContent = q.stem;
+
+  const letters = ['A', 'B', 'C', 'D', 'E'];
+  document.getElementById('options-list').innerHTML = q.options
+    .map((opt, i) =>
+      `<button class="option-btn" data-index="${i}" onclick="selectAnswer(${i})">
+        <span class="option-letter">${letters[i]}</span>
+        <span>${escapeHtml(opt)}</span>
+      </button>`
+    )
+    .join('');
+
+  document.getElementById('explanation-box').classList.add('hidden');
+  document.getElementById('btn-next-inline').classList.add('hidden');
+
+  const scrollEl = document.querySelector('.exam-question-scroll');
+  if (scrollEl) scrollEl.scrollTop = 0;
+  const stimScroll = document.querySelector('.exam-stimulus-scroll');
+  if (stimScroll) stimScroll.scrollTop = 0;
+
+  if (questionQueue.length <= REFILL_THRESHOLD) {
+    refillQueue();
+  }
+}
+
+// ── Answer selection ──
+
+function selectAnswer(index) {
+  if (answered) return;
+  answered = true;
+
+  const q = questionQueue[0];
+  const isCorrect = index === q.correct;
+  totalAnswered++;
+  if (isCorrect) totalCorrect++;
+
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach((btn, i) => {
+    btn.classList.add('disabled');
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === index && !isCorrect) btn.classList.add('incorrect');
+  });
+
+  const explBox = document.getElementById('explanation-box');
+  document.getElementById('explanation-icon').textContent = isCorrect ? '✓' : '✗';
+  document.getElementById('explanation-icon').style.color = isCorrect ? 'var(--correct)' : 'var(--incorrect)';
+  document.getElementById('explanation-text').textContent = q.explanation;
+  explBox.classList.remove('hidden');
+
+  document.getElementById('btn-next-inline').classList.remove('hidden');
+}
+
+// ── Navigation ──
+
+function nextQuestion() {
+  if (!answered) return;
+  questionQueue.shift();
+  currentIndex++;
+  renderQuestion();
+}
+
+// ── Draggable divider ──
+
+function initDivider() {
+  const divider = document.getElementById('exam-divider');
+  if (!divider) return;
+
+  let dragging = false;
+  let startX = 0;
+  let leftStartWidth = 0;
+
+  divider.addEventListener('mousedown', e => {
+    e.preventDefault();
+    dragging = true;
+    startX = e.clientX;
+    const left = document.getElementById('exam-left');
+    leftStartWidth = left.getBoundingClientRect().width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const left = document.getElementById('exam-left');
+    const body = document.querySelector('.exam-body');
+    if (!left || !body) return;
+
+    const bodyWidth = body.getBoundingClientRect().width;
+    const dividerWidth = 16;
+    const minLeft = 200;
+    const minRight = 280;
+    const maxLeft = bodyWidth - dividerWidth - minRight;
+
+    let newWidth = leftStartWidth + (e.clientX - startX);
+    newWidth = Math.max(minLeft, Math.min(maxLeft, newWidth));
+
+    left.style.flex = 'none';
+    left.style.width = newWidth + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+}
+
+init();
