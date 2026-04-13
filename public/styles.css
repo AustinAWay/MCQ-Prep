@@ -558,7 +558,7 @@ body {
   width: 100%;
   padding: 14px 18px;
   background: var(--surface);
-  border: 1.5px solid var(--border);
+  border: none;
   border-radius: 10px;
   color: var(--text);
   font-size: 0.92rem;
@@ -567,11 +567,19 @@ body {
   cursor: pointer;
   transition: all var(--transition);
   font-family: inherit;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.option-btn:hover:not(.disabled) {
-  border-color: var(--primary);
+.option-btn:hover:not(.disabled):not(.crossed-out) {
   background: var(--surface-2);
+}
+
+.option-btn.crossed-out {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+.option-btn.crossed-out .option-letter {
+  text-decoration: line-through;
 }
 
 .option-letter {
@@ -596,8 +604,8 @@ body {
 }
 
 .option-btn.selected {
-  border-color: var(--primary);
   background: var(--primary-glow);
+  box-shadow: 0 0 0 2px var(--primary);
 }
 .option-btn.selected .option-letter {
   background: var(--primary);
@@ -605,8 +613,8 @@ body {
 }
 
 .option-btn.correct {
-  border-color: var(--correct-border);
   background: var(--correct-bg);
+  box-shadow: 0 0 0 2px var(--correct);
 }
 .option-btn.correct .option-letter {
   background: var(--correct);
@@ -614,8 +622,8 @@ body {
 }
 
 .option-btn.incorrect {
-  border-color: var(--incorrect-border);
   background: var(--incorrect-bg);
+  box-shadow: 0 0 0 2px var(--incorrect);
 }
 .option-btn.incorrect .option-letter {
   background: var(--incorrect);

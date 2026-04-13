@@ -140,7 +140,17 @@ function init() {
   initDivider();
   initHighlighter();
   initNotes();
+  initCrossOut();
   checkSession();
+}
+
+function initCrossOut() {
+  document.addEventListener('contextmenu', (e) => {
+    const btn = e.target.closest('.option-btn');
+    if (!btn || answered) return;
+    e.preventDefault();
+    btn.classList.toggle('crossed-out');
+  });
 }
 
 // ── Screen management ──
