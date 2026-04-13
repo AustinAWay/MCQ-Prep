@@ -449,17 +449,6 @@ body {
   display: none;
 }
 
-.exam-panel-title {
-  padding: 14px 24px 10px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: 0.01em;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--surface-2);
-}
-
 .exam-stimulus-scroll {
   flex: 1;
   overflow-y: auto;
@@ -903,20 +892,8 @@ mark {
 
 /* ============ STIMULUS (inside left panel) ============ */
 .stimulus-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px 22px;
+  padding: 0;
   margin-bottom: 16px;
-}
-
-.stimulus-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--primary);
-  margin-bottom: 10px;
 }
 
 .stimulus-content {

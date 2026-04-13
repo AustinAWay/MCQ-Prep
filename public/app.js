@@ -316,7 +316,6 @@ function renderStimulus(stimulus) {
 
   return `
     <div class="stimulus-box">
-      <div class="stimulus-label">${typeLabel}</div>
       <div class="stimulus-content">${rendered}</div>
       ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
     </div>
@@ -360,7 +359,6 @@ function renderQuestion() {
   questionStartTime = Date.now();
   const q = questionQueue[0];
 
-  document.getElementById('exam-stimulus-title').textContent = `Q${currentIndex + 1} Stimulus`;
   document.getElementById('exam-q-badge').textContent = currentIndex + 1;
 
   const examLeft = document.getElementById('exam-left');
