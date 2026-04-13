@@ -278,7 +278,8 @@ async function startQuiz(key) {
 
     if (questionQueue.length === 0) throw new Error('No questions returned from the API.');
 
-    document.getElementById('course-label').textContent = course.name;
+    const courseLabel = document.getElementById('course-label');
+    if (courseLabel) courseLabel.textContent = course.name;
     showScreen('quiz');
     renderQuestion();
   } catch (err) {
