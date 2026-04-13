@@ -139,6 +139,10 @@
                   <p id="explanation-text"></p>
                 </div>
 
+                <button class="btn-next-inline hidden" id="btn-next-inline" onclick="nextQuestion()">
+                  Next Question
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
               </div>
             </div>
           </div>
@@ -154,19 +158,7 @@
         </div>
       </div>
 
-      <!-- Footer Bar (dark, matching CB exam) -->
-      <div class="exam-footer">
-        <div class="exam-footer-left">
-          <span class="exam-user-email" id="exam-user-email"></span>
-        </div>
-        <div class="exam-footer-center">
-          <div class="exam-progress-dots" id="exam-progress-dots"></div>
-          <span class="exam-footer-pill" id="exam-footer-pill">Question 1</span>
-        </div>
-        <div class="exam-footer-right">
-          <button class="exam-footer-btn exam-footer-next" id="btn-next" onclick="nextQuestion()">Next</button>
-        </div>
-      </div>
+      <div class="exam-footer"></div>
     </div>
 
   </div>

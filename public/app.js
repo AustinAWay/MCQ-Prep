@@ -382,15 +382,7 @@ function renderQuestion() {
     .join('');
 
   document.getElementById('explanation-box').classList.add('hidden');
-
-  // Footer
-  const emailEl = document.getElementById('exam-user-email');
-  if (emailEl && currentUser) emailEl.textContent = currentUser.email;
-  const pillEl = document.getElementById('exam-footer-pill');
-  if (pillEl) pillEl.textContent = `Question ${currentIndex + 1}`;
-
-  const btnNext = document.getElementById('btn-next');
-  if (btnNext) btnNext.disabled = true;
+  document.getElementById('btn-next-inline').classList.add('hidden');
 
   // Notes: restore for this question
   const ta = document.getElementById('notes-textarea');
@@ -430,9 +422,7 @@ function selectAnswer(index) {
   document.getElementById('explanation-icon').style.color = isCorrect ? 'var(--correct)' : 'var(--incorrect)';
   document.getElementById('explanation-text').textContent = q.explanation;
   explBox.classList.remove('hidden');
-
-  const btnNext = document.getElementById('btn-next');
-  if (btnNext) btnNext.disabled = false;
+  document.getElementById('btn-next-inline').classList.remove('hidden');
 
   saveAnswer(q, index, isCorrect, timeMs);
 }
