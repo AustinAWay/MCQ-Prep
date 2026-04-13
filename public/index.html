@@ -12,6 +12,9 @@
     <!-- Auth Screen -->
     <div id="screen-auth" class="screen active">
       <div class="auth-container">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
         <div class="auth-card">
           <h1 class="auth-title">AP Exam Prep</h1>
           <p class="auth-subtitle">Enter your email to start practicing</p>
@@ -32,6 +35,9 @@
     <!-- Course Selection Screen -->
     <div id="screen-home" class="screen">
       <div class="home-container">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
         <div class="home-header">
           <div></div>
           <button class="sign-out-btn" onclick="logout()">Sign Out</button>
@@ -94,51 +100,79 @@
         <div class="exam-header-center">
           <span id="course-label" class="exam-course-label">Multiple Choice</span>
         </div>
-        <div class="exam-header-right"></div>
+        <div class="exam-header-right">
+          <button class="exam-tool-btn" id="btn-highlight" onclick="toggleHighlightMode()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Highlight
+          </button>
+          <button class="exam-tool-btn" id="btn-notes" onclick="toggleNotesPanel()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Notes
+          </button>
+        </div>
       </div>
 
       <!-- Split Panel Body -->
-      <div class="exam-body">
-        <!-- Left: Stimulus -->
-        <div class="exam-left" id="exam-left">
-          <div class="exam-panel-title" id="exam-stimulus-title">Q1 Stimulus</div>
-          <div class="exam-stimulus-scroll" id="stimulus-container"></div>
-        </div>
-
-        <!-- Draggable Divider -->
-        <div class="exam-divider" id="exam-divider">
-          <div class="exam-divider-handle">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="exam-body-wrapper">
+        <div class="exam-body">
+          <!-- Left: Stimulus -->
+          <div class="exam-left" id="exam-left">
+            <div class="exam-panel-title" id="exam-stimulus-title">Q1 Stimulus</div>
+            <div class="exam-stimulus-scroll" id="stimulus-container"></div>
           </div>
-        </div>
 
-        <!-- Right: Question -->
-        <div class="exam-right" id="exam-right">
-          <div class="exam-question-scroll">
-            <div class="exam-question-header">
-              <span class="exam-q-badge" id="exam-q-badge">1</span>
+          <!-- Draggable Divider -->
+          <div class="exam-divider" id="exam-divider">
+            <div class="exam-divider-handle">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
+          </div>
 
-            <div class="exam-question-body">
-              <h2 class="question-text" id="question-text"></h2>
-              <div class="options-list" id="options-list"></div>
-
-              <div class="explanation-box hidden" id="explanation-box">
-                <div class="explanation-icon" id="explanation-icon"></div>
-                <p id="explanation-text"></p>
+          <!-- Right: Question -->
+          <div class="exam-right" id="exam-right">
+            <div class="exam-question-scroll">
+              <div class="exam-question-header">
+                <span class="exam-q-badge" id="exam-q-badge">1</span>
               </div>
 
-              <button class="btn-next-inline hidden" id="btn-next-inline" onclick="nextQuestion()">
-                Next Question
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
+              <div class="exam-question-body">
+                <h2 class="question-text" id="question-text"></h2>
+                <div class="options-list" id="options-list"></div>
+
+                <div class="explanation-box hidden" id="explanation-box">
+                  <div class="explanation-icon" id="explanation-icon"></div>
+                  <p id="explanation-text"></p>
+                </div>
+
+                <button class="btn-next-inline hidden" id="btn-next-inline" onclick="nextQuestion()">
+                  Next Question
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
             </div>
           </div>
+        </div>
+
+        <!-- Notes Panel -->
+        <div class="notes-panel hidden" id="notes-panel">
+          <div class="notes-header">
+            <span class="notes-title">Notes</span>
+            <button class="notes-close" onclick="toggleNotesPanel()">&times;</button>
+          </div>
+          <textarea class="notes-textarea" id="notes-textarea" placeholder="Type your notes here..."></textarea>
         </div>
       </div>
 
+      <!-- Footer Bar -->
+      <div class="exam-footer">
+        <div class="exam-footer-left">
+          <span class="exam-user-email" id="exam-user-email"></span>
+        </div>
+        <div class="exam-footer-right">
+          <span class="exam-q-count" id="exam-q-count">Q1</span>
+        </div>
+      </div>
     </div>
-
 
   </div>
 

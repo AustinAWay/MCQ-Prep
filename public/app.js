@@ -102,6 +102,11 @@ let totalCorrect = 0;
 let answered = false;
 let fetching = false;
 
+// ── Tools state ──
+let highlightMode = false;
+let notesMap = {};
+let notesOpen = false;
+
 // ── Utilities ──
 
 function shuffle(arr) {
@@ -136,6 +141,8 @@ function init() {
     if (el) el.textContent = 'API-powered questions';
   });
   initDivider();
+  initHighlighter();
+  initNotes();
   checkSession();
 }
 
@@ -241,6 +248,7 @@ async function startQuiz(key) {
   currentIndex = 0;
   totalAnswered = 0;
   totalCorrect = 0;
+  notesMap = {};
 
   try {
     const units = shuffle(course.units).slice(0, 3);
@@ -289,8 +297,15 @@ function renderStimulus(stimulus) {
 
   const attribution = stimulus.source_attribution || stimulus.source_ref || '';
   const content = stimulus.content || '';
-  const isTable = content.includes('<table') || (content.includes('|') && content.includes('\n'));
-  const rendered = isTable && content.includes('|') ? renderMarkdownTable(content) : escapeHtml(content);
+
+  let rendered;
+  if (content.includes('<table') || content.includes('<tr') || content.includes('<div')) {
+    rendered = content;
+  } else if (content.includes('|') && content.includes('\n')) {
+    rendered = renderMarkdownTable(content);
+  } else {
+    rendered = escapeHtml(content);
+  }
 
   return `
     <div class="stimulus-box">
@@ -371,6 +386,16 @@ function renderQuestion() {
   document.getElementById('explanation-box').classList.add('hidden');
   document.getElementById('btn-next-inline').classList.add('hidden');
 
+  // Footer
+  const emailEl = document.getElementById('exam-user-email');
+  if (emailEl && currentUser) emailEl.textContent = currentUser.email;
+  const qCountEl = document.getElementById('exam-q-count');
+  if (qCountEl) qCountEl.textContent = `Q${currentIndex + 1}`;
+
+  // Notes: restore for this question
+  const ta = document.getElementById('notes-textarea');
+  if (ta) ta.value = notesMap[currentIndex] || '';
+
   const scrollEl = document.querySelector('.exam-question-scroll');
   if (scrollEl) scrollEl.scrollTop = 0;
   const stimScroll = document.querySelector('.exam-stimulus-scroll');
@@ -415,6 +440,73 @@ function nextQuestion() {
   questionQueue.shift();
   currentIndex++;
   renderQuestion();
+}
+
+// ── Highlight Tool ──
+
+function toggleHighlightMode() {
+  highlightMode = !highlightMode;
+  const quiz = document.getElementById('screen-quiz');
+  const btn = document.getElementById('btn-highlight');
+
+  if (highlightMode) {
+    quiz.classList.add('highlight-active');
+    btn.classList.add('active');
+  } else {
+    quiz.classList.remove('highlight-active');
+    btn.classList.remove('active');
+  }
+}
+
+function initHighlighter() {
+  document.addEventListener('mouseup', () => {
+    if (!highlightMode) return;
+
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+
+    const range = sel.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const examBody = document.querySelector('.exam-body-wrapper');
+    if (!examBody || !examBody.contains(container)) return;
+
+    try {
+      const mark = document.createElement('mark');
+      range.surroundContents(mark);
+    } catch {
+      // surroundContents fails if selection spans multiple elements;
+      // fall back to execCommand
+      document.execCommand('hiliteColor', false, '#fef08a');
+    }
+
+    sel.removeAllRanges();
+  });
+}
+
+// ── Notes Tool ──
+
+function toggleNotesPanel() {
+  const panel = document.getElementById('notes-panel');
+  const btn = document.getElementById('btn-notes');
+  notesOpen = !notesOpen;
+
+  if (notesOpen) {
+    panel.classList.remove('hidden');
+    btn.classList.add('active');
+    const ta = document.getElementById('notes-textarea');
+    if (ta) ta.focus();
+  } else {
+    panel.classList.add('hidden');
+    btn.classList.remove('active');
+  }
+}
+
+function initNotes() {
+  const ta = document.getElementById('notes-textarea');
+  if (!ta) return;
+  ta.addEventListener('input', () => {
+    notesMap[currentIndex] = ta.value;
+  });
 }
 
 // ── Draggable divider ──

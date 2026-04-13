@@ -23,6 +23,7 @@
   --incorrect-bg: rgba(220, 38, 38, 0.07);
   --incorrect-border: rgba(220, 38, 38, 0.3);
   --warning: #d97706;
+  --highlight: #fef08a;
   --radius: 12px;
   --radius-lg: 16px;
   --transition: 0.2s ease;
@@ -56,6 +57,40 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ============ GRADIENT ORBS ============ */
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(80px);
+}
+
+.orb-1 {
+  width: 500px;
+  height: 500px;
+  top: -120px;
+  right: -100px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(59, 130, 246, 0.06) 50%, transparent 70%);
+}
+
+.orb-2 {
+  width: 450px;
+  height: 450px;
+  bottom: -80px;
+  left: -120px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(34, 197, 94, 0.05) 50%, transparent 70%);
+}
+
+.orb-3 {
+  width: 350px;
+  height: 350px;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(236, 72, 153, 0.04) 50%, transparent 70%);
+}
+
 /* ============ AUTH SCREEN ============ */
 .auth-container {
   display: flex;
@@ -63,6 +98,8 @@ body {
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
+  position: relative;
+  overflow: hidden;
 }
 
 .auth-card {
@@ -72,6 +109,8 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 40px 36px;
+  position: relative;
+  z-index: 1;
 }
 
 .auth-title {
@@ -162,12 +201,16 @@ body {
   max-width: 900px;
   margin: 0 auto;
   padding: 24px 24px 80px;
+  position: relative;
+  overflow: hidden;
 }
 
 .home-header {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .sign-out-btn {
@@ -190,6 +233,8 @@ body {
 .hero {
   text-align: center;
   margin-bottom: 48px;
+  position: relative;
+  z-index: 1;
 }
 
 .hero h1 {
@@ -212,6 +257,8 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .course-card {
@@ -307,7 +354,7 @@ body {
 .exam-header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 140px;
 }
 .exam-header-right { justify-content: flex-end; }
@@ -324,12 +371,12 @@ body {
   align-items: center;
   gap: 5px;
   background: none;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 5px 10px;
   border-radius: 6px;
   transition: all var(--transition);
   font-family: inherit;
@@ -340,10 +387,25 @@ body {
   background: var(--surface-2);
 }
 
+.exam-tool-btn.active {
+  background: var(--primary-glow);
+  color: var(--primary);
+  border-color: rgba(26, 86, 219, 0.2);
+}
+
 .exam-course-label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text);
+}
+
+/* --- Body Wrapper (holds panels + notes) --- */
+.exam-body-wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
 }
 
 /* --- Split Panel Body --- */
@@ -608,6 +670,139 @@ body {
   display: none;
 }
 
+/* --- Highlight Tool --- */
+#screen-quiz.highlight-active .exam-left,
+#screen-quiz.highlight-active .exam-right {
+  cursor: text;
+}
+
+mark {
+  background: var(--highlight);
+  padding: 1px 0;
+  border-radius: 2px;
+  color: inherit;
+}
+
+/* --- Notes Panel --- */
+.notes-panel {
+  width: 320px;
+  min-width: 320px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  transition: width 0.2s ease, min-width 0.2s ease;
+}
+
+.notes-panel.hidden {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-left: none;
+}
+
+.notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.notes-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.notes-close {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color var(--transition);
+}
+.notes-close:hover {
+  color: var(--text);
+}
+
+.notes-textarea {
+  flex: 1;
+  padding: 16px;
+  border: none;
+  font-size: 0.88rem;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: none;
+  color: var(--text);
+  background: var(--surface);
+}
+.notes-textarea:focus {
+  outline: none;
+}
+.notes-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* --- Footer Bar --- */
+.exam-footer {
+  height: 40px;
+  min-height: 40px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 10;
+  position: relative;
+}
+
+.exam-footer::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  right: 16px;
+  height: 0;
+  border-top: 2px dashed var(--primary);
+  opacity: 0.2;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.exam-footer-left,
+.exam-footer-right {
+  z-index: 1;
+  background: var(--surface);
+  padding: 0 8px 0 0;
+}
+.exam-footer-right {
+  padding: 0 0 0 8px;
+}
+
+.exam-user-email {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.exam-q-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-glow);
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+
+/* --- General Buttons --- */
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -653,7 +848,6 @@ body {
 .hidden {
   display: none !important;
 }
-
 
 /* ============ LOADING SCREEN ============ */
 .loading-container {
@@ -781,6 +975,28 @@ body {
   color: var(--text);
 }
 
+.stimulus-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 0.85rem;
+}
+
+.stimulus-content table th,
+.stimulus-content table td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+  background: none;
+}
+
+.stimulus-content table th {
+  background: var(--surface-2);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
   .exam-body {
@@ -812,14 +1028,32 @@ body {
     padding: 16px 20px;
   }
 
-  .exam-progress-dots {
-    display: none;
+  .notes-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    min-width: 280px;
   }
+
+  .notes-panel.hidden {
+    width: 0;
+    min-width: 0;
+  }
+
+  .gradient-orb {
+    filter: blur(60px);
+  }
+
+  .orb-1 { width: 300px; height: 300px; }
+  .orb-2 { width: 280px; height: 280px; }
+  .orb-3 { width: 200px; height: 200px; }
 }
 
 @media (max-width: 600px) {
   .home-container {
-    padding: 36px 16px 60px;
+    padding: 24px 16px 60px;
   }
 
   .hero h1 {
@@ -830,16 +1064,22 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .results-container {
-    padding: 32px 16px 60px;
-  }
-
-  .score-details {
-    gap: 24px;
-  }
-
   .exam-header-left,
   .exam-header-right {
     min-width: auto;
+  }
+
+  .exam-header-right {
+    gap: 4px;
+  }
+
+  .exam-tool-btn {
+    font-size: 0;
+    gap: 0;
+    padding: 6px;
+  }
+  .exam-tool-btn svg {
+    width: 18px;
+    height: 18px;
   }
 }
