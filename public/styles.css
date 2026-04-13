@@ -457,31 +457,26 @@ body {
 
 /* --- Divider --- */
 .exam-divider {
-  width: 16px;
-  min-width: 16px;
+  width: 5px;
+  min-width: 5px;
   cursor: col-resize;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  border-right: 1px solid var(--border);
+  background: var(--border);
   transition: background 0.15s ease;
   z-index: 5;
   flex-shrink: 0;
 }
 .exam-divider:hover {
-  background: var(--surface-2);
+  background: var(--primary);
 }
 .exam-divider.hidden-panel {
   display: none;
 }
 
 .exam-divider-handle {
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: none;
 }
 
 /* --- Right Panel --- */

@@ -573,7 +573,7 @@ function initDivider() {
     if (!left || !body) return;
 
     const bodyWidth = body.getBoundingClientRect().width;
-    const dividerWidth = 16;
+    const dividerWidth = 5;
     const minLeft = 200;
     const minRight = 280;
     const maxLeft = bodyWidth - dividerWidth - minRight;
