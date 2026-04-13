@@ -533,27 +533,6 @@ body {
   padding: 20px 32px 32px;
 }
 
-.exam-question-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.exam-q-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.85rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
 .question-text {
   font-size: 1.05rem;
   font-weight: 500;
@@ -690,6 +669,29 @@ body {
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Check Answer Button --- */
+.btn-check-answer {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 24px;
+  background: var(--text);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+  margin-bottom: 16px;
+}
+.btn-check-answer:hover {
+  opacity: 0.85;
+}
+.btn-check-answer.hidden {
+  display: none;
 }
 
 /* --- Inline Next Button --- */

@@ -102,6 +102,7 @@ let totalCorrect = 0;
 let answered = false;
 let fetching = false;
 let questionStartTime = 0;
+let selectedOption = -1;
 
 // ── Tools state ──
 let highlightMode = false;
@@ -360,7 +361,6 @@ function renderQuestion() {
   questionStartTime = Date.now();
   const q = questionQueue[0];
 
-  document.getElementById('exam-q-badge').textContent = currentIndex + 1;
 
   const examLeft = document.getElementById('exam-left');
   const examDivider = document.getElementById('exam-divider');
@@ -380,6 +380,8 @@ function renderQuestion() {
 
   document.getElementById('question-text').textContent = q.stem;
 
+  selectedOption = -1;
+
   const letters = ['A', 'B', 'C', 'D', 'E'];
   document.getElementById('options-list').innerHTML = q.options
     .map((opt, i) =>
@@ -392,6 +394,7 @@ function renderQuestion() {
 
   document.getElementById('explanation-box').classList.add('hidden');
   document.getElementById('btn-next-inline').classList.add('hidden');
+  document.getElementById('btn-check-answer').classList.add('hidden');
 
   // Notes: restore for this question
   const ta = document.getElementById('notes-textarea');
@@ -411,9 +414,23 @@ function renderQuestion() {
 
 function selectAnswer(index) {
   if (answered) return;
+
+  selectedOption = index;
+
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach((btn, i) => {
+    btn.classList.toggle('selected', i === index);
+  });
+
+  document.getElementById('btn-check-answer').classList.remove('hidden');
+}
+
+function checkAnswer() {
+  if (answered || selectedOption < 0) return;
   answered = true;
 
   const q = questionQueue[0];
+  const index = selectedOption;
   const isCorrect = index === q.correct;
   const timeMs = Date.now() - questionStartTime;
   totalAnswered++;
@@ -421,10 +438,13 @@ function selectAnswer(index) {
 
   const buttons = document.querySelectorAll('.option-btn');
   buttons.forEach((btn, i) => {
+    btn.classList.remove('selected');
     btn.classList.add('disabled');
     if (i === q.correct) btn.classList.add('correct');
     else if (i === index && !isCorrect) btn.classList.add('incorrect');
   });
+
+  document.getElementById('btn-check-answer').classList.add('hidden');
 
   const explBox = document.getElementById('explanation-box');
   document.getElementById('explanation-icon').textContent = isCorrect ? '✓' : '✗';
