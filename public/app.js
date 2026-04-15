@@ -752,6 +752,11 @@ async function selectFRQ(key) {
     });
     const data = await res.json();
 
+    if (data.detail) {
+      showError('FRQ practice for ' + course.name + ' is not available yet. The question bank is still being built -- check back soon.');
+      return;
+    }
+
     frqItems = [];
     const meta = data.section_metadata || {};
 
@@ -771,14 +776,17 @@ async function selectFRQ(key) {
       }
     }
 
-    if (frqItems.length === 0) throw new Error('No FRQ items found.');
+    if (frqItems.length === 0) {
+      showError('No FRQ items found for ' + course.name + '. Check back soon.');
+      return;
+    }
 
     frqIndex = 0;
     showScreen('frq');
     renderFRQ();
   } catch (err) {
     console.error('Failed to load FRQs:', err);
-    showError(err.message);
+    showError('Could not load FRQs. Please try again.');
   }
 }
 
