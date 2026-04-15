@@ -32,41 +32,14 @@ export default async function handler(req, res) {
   }
 
   const userId = sessions[0].user_id;
-  const {
-    question_id,
-    subject,
-    unit_code,
-    topic_code,
-    difficulty,
-    item_type,
-    stem,
-    options,
-    correct_index,
-    selected_index,
-    is_correct,
-    time_ms,
-    stimulus,
-    explanation,
-  } = req.body;
-
-  if (!question_id || !stem || selected_index === undefined) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
+  const { subject } = req.body;
 
   try {
-    await sql`
-      INSERT INTO answers (
-        user_id, question_id, subject, unit_code, topic_code, difficulty,
-        item_type, stem, options, correct_index, selected_index, is_correct,
-        time_ms, stimulus, explanation
-      ) VALUES (
-        ${userId}, ${question_id}, ${subject || ''}, ${unit_code || null},
-        ${topic_code || null}, ${difficulty || null}, ${item_type || 'mcq'},
-        ${stem}, ${JSON.stringify(options || [])}, ${correct_index},
-        ${selected_index}, ${is_correct}, ${time_ms || 0},
-        ${stimulus ? JSON.stringify(stimulus) : null}, ${explanation || null}
-      )
-    `;
+    if (subject) {
+      await sql`DELETE FROM answers WHERE user_id = ${userId} AND subject = ${subject}`;
+    } else {
+      await sql`DELETE FROM answers WHERE user_id = ${userId}`;
+    }
 
     return res.status(200).json({ ok: true });
   } catch (err) {

@@ -16,6 +16,7 @@ async function checkSession() {
       const data = await res.json();
       currentUser = data.user;
       showScreen('home');
+      loadStats();
     } else {
       showScreen('auth');
     }
@@ -31,9 +32,7 @@ async function handleAuth(e) {
   errEl.classList.add('hidden');
   btn.disabled = true;
   btn.textContent = 'Loading...';
-
   const email = document.getElementById('auth-email').value.trim();
-
   try {
     const res = await fetch(AUTH_API, {
       method: 'POST',
@@ -41,7 +40,6 @@ async function handleAuth(e) {
       body: JSON.stringify({ action: 'enter', email }),
     });
     const data = await res.json();
-
     if (!res.ok) {
       errEl.textContent = data.error || 'Something went wrong';
       errEl.classList.remove('hidden');
@@ -49,9 +47,9 @@ async function handleAuth(e) {
       btn.textContent = 'Continue';
       return;
     }
-
     currentUser = data.user;
     showScreen('home');
+    loadStats();
   } catch {
     errEl.textContent = 'Network error. Please try again.';
     errEl.classList.remove('hidden');
@@ -67,8 +65,11 @@ async function logout() {
     body: JSON.stringify({ action: 'logout' }),
   });
   currentUser = null;
+  cachedStats = {};
   showScreen('auth');
 }
+
+// ── Courses ──
 
 const COURSES = {
   'ap-geo': {
@@ -91,7 +92,8 @@ const COURSES = {
 const BATCH_SIZE = 5;
 const REFILL_THRESHOLD = 3;
 
-let currentCourse = null;
+// ── State ──
+
 let courseKey = null;
 let questionQueue = [];
 let seenIds = new Set();
@@ -103,11 +105,14 @@ let answered = false;
 let fetching = false;
 let questionStartTime = 0;
 let selectedOption = -1;
+let selectedUnits = [];
+let unitPickerMode = 'mcq';
 
-// ── Tools state ──
 let highlightMode = false;
 let notesMap = {};
 let notesOpen = false;
+
+let cachedStats = {};
 
 // ── Utilities ──
 
@@ -133,6 +138,175 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function weightedSample(items, weights, count) {
+  const result = [];
+  const available = items.map((item, i) => ({ item, weight: weights[i] }));
+  for (let n = 0; n < count && available.length > 0; n++) {
+    const totalWeight = available.reduce((s, a) => s + a.weight, 0);
+    let r = Math.random() * totalWeight;
+    let picked = available.length - 1;
+    for (let i = 0; i < available.length; i++) {
+      r -= available[i].weight;
+      if (r <= 0) { picked = i; break; }
+    }
+    result.push(available[picked].item);
+    available.splice(picked, 1);
+  }
+  return result;
+}
+
+// ── Stats ──
+
+async function loadStats() {
+  try {
+    const res = await fetch('/api/stats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      cachedStats = data.stats || {};
+      renderHomeStats();
+    }
+  } catch {}
+}
+
+function renderHomeStats() {
+  for (const [key, course] of Object.entries(COURSES)) {
+    const container = document.getElementById(`stats-${key}`);
+    if (!container) continue;
+
+    const subjectStats = cachedStats[course.subject] || {};
+    const hasData = Object.keys(subjectStats).length > 0;
+
+    if (!hasData) {
+      container.classList.remove('has-data');
+      container.innerHTML = '';
+      continue;
+    }
+
+    container.classList.add('has-data');
+
+    let html = '<div class="stats-grid">';
+    for (const unit of course.units) {
+      const us = subjectStats[unit];
+      if (!us) continue;
+
+      html += `<div class="unit-stat"><span class="unit-stat-label">U${unit}</span>`;
+
+      if (us.mcq && us.mcq.total > 0) {
+        const pct = Math.round((us.mcq.correct / us.mcq.total) * 100);
+        const color = pct >= 80 ? 'green' : pct >= 50 ? 'yellow' : 'red';
+        html += `<div class="stat-bar-wrap">
+          <span class="stat-bar-type">M</span>
+          <div class="stat-bar"><div class="stat-bar-fill ${color}" style="width:${pct}%"></div></div>
+          <span class="stat-pct">${pct}%</span>
+        </div>`;
+      }
+
+      if (us.frq && us.frq.total > 0) {
+        const pct = Math.round((us.frq.correct / us.frq.total) * 100);
+        const color = pct >= 80 ? 'green' : pct >= 50 ? 'yellow' : 'red';
+        html += `<div class="stat-bar-wrap">
+          <span class="stat-bar-type">F</span>
+          <div class="stat-bar"><div class="stat-bar-fill ${color}" style="width:${pct}%"></div></div>
+          <span class="stat-pct">${pct}%</span>
+        </div>`;
+      }
+
+      html += '</div>';
+    }
+    html += '</div>';
+    html += `<button class="reset-btn" onclick="resetProgress('${key}')">Reset progress</button>`;
+    container.innerHTML = html;
+  }
+}
+
+async function resetProgress(key) {
+  const course = COURSES[key];
+  if (!confirm(`Reset all progress for ${course.name}?`)) return;
+  try {
+    await fetch('/api/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject: course.subject }),
+    });
+    await loadStats();
+  } catch {}
+}
+
+// ── Adaptive Algorithm ──
+
+function getAdaptiveUnits(key, mode) {
+  const course = COURSES[key];
+  const subjectStats = cachedStats[course.subject] || {};
+  const bucket = mode === 'mcq' ? 'mcq' : 'frq';
+
+  const weights = course.units.map(u => {
+    const s = subjectStats[u]?.[bucket];
+    if (!s || s.total < 3) return 0.5;
+    return 1 - (s.correct / s.total);
+  });
+
+  return weightedSample(course.units, weights, 3);
+}
+
+function getUnitPool(key, mode) {
+  if (selectedUnits.length > 0) return selectedUnits;
+  return getAdaptiveUnits(key, mode);
+}
+
+// ── Unit Picker ──
+
+function showUnitPicker(key, mode) {
+  courseKey = key;
+  unitPickerMode = mode;
+  selectedUnits = [];
+
+  const course = COURSES[key];
+  document.getElementById('units-title').textContent = course.name + ' — ' + mode.toUpperCase();
+
+  const grid = document.getElementById('unit-grid');
+  let html = `<button class="unit-chip adaptive selected" onclick="toggleAdaptive(this)">All Units (Adaptive)</button>`;
+  for (const unit of course.units) {
+    html += `<button class="unit-chip" data-unit="${unit}" onclick="toggleUnit(this, '${unit}')">Unit ${unit}</button>`;
+  }
+  grid.innerHTML = html;
+
+  showScreen('units');
+}
+
+function toggleUnit(el, unit) {
+  el.classList.toggle('selected');
+
+  const adaptiveBtn = document.querySelector('.unit-chip.adaptive');
+  if (adaptiveBtn) adaptiveBtn.classList.remove('selected');
+
+  selectedUnits = [];
+  document.querySelectorAll('.unit-chip[data-unit].selected').forEach(c => {
+    selectedUnits.push(c.dataset.unit);
+  });
+
+  if (selectedUnits.length === 0 && adaptiveBtn) {
+    adaptiveBtn.classList.add('selected');
+  }
+}
+
+function toggleAdaptive(el) {
+  document.querySelectorAll('.unit-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedUnits = [];
+}
+
+function startFromUnitPicker() {
+  if (unitPickerMode === 'mcq') {
+    selectCourse(courseKey);
+  } else {
+    selectFRQ(courseKey);
+  }
 }
 
 // ── Init ──
@@ -184,13 +358,14 @@ function showError(message) {
 }
 
 function goHome() {
+  loadStats();
   showScreen('home');
 }
 
-// ── API ──
+// ── MCQ API ──
 
-async function fetchBatch(subject, units) {
-  const unit = pickRandomUnit(units);
+async function fetchBatch(subject, unitPool) {
+  const unit = pickRandomUnit(unitPool);
   const res = await fetch(API_PROXY, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -211,7 +386,6 @@ function normalizeItem(item, stimuli) {
   const options = item.options.map(o => o.text);
   const letters = item.options.map(o => o.label);
   const correctIndex = letters.indexOf(item.correct_answer);
-
   return {
     id: item.id,
     stem: item.stem,
@@ -230,17 +404,13 @@ async function refillQueue() {
   fetching = true;
   try {
     const course = COURSES[courseKey];
-    const result = await fetchBatch(course.subject, course.units);
-
-    if (result.stimuli) {
-      result.stimuli.forEach(s => { stimuliMap[s.id] = s; });
-    }
-
+    const unitPool = getUnitPool(courseKey, 'mcq');
+    const result = await fetchBatch(course.subject, unitPool);
+    if (result.stimuli) result.stimuli.forEach(s => { stimuliMap[s.id] = s; });
     if (result.items) {
       const newItems = result.items
         .filter(item => !seenIds.has(item.id))
         .map(item => normalizeItem(item, stimuliMap));
-
       newItems.forEach(q => seenIds.add(q.id));
       questionQueue.push(...newItems);
     }
@@ -250,11 +420,10 @@ async function refillQueue() {
   fetching = false;
 }
 
-// ── Quiz lifecycle ──
+// ── MCQ Quiz lifecycle ──
 
 function selectCourse(key) {
   courseKey = key;
-  currentCourse = key;
   startQuiz(key);
 }
 
@@ -271,9 +440,10 @@ async function startQuiz(key) {
   notesMap = {};
 
   try {
-    const units = shuffle(course.units).slice(0, 3);
+    const unitPool = getUnitPool(key, 'mcq');
+    const fetchUnits = unitPool.length >= 3 ? unitPool.slice(0, 3) : unitPool;
     const results = await Promise.all(
-      units.map(u => fetchBatch(course.subject, [u]))
+      fetchUnits.map(u => fetchBatch(course.subject, [u]))
     );
 
     for (const r of results) {
@@ -288,11 +458,8 @@ async function startQuiz(key) {
     }
 
     questionQueue = shuffle(questionQueue);
-
     if (questionQueue.length === 0) throw new Error('No questions returned from the API.');
 
-    const courseLabel = document.getElementById('course-label');
-    if (courseLabel) courseLabel.textContent = course.name;
     showScreen('quiz');
     renderQuestion();
   } catch (err) {
@@ -305,17 +472,6 @@ async function startQuiz(key) {
 
 function renderStimulus(stimulus) {
   if (!stimulus) return '';
-
-  let typeLabel = 'Source';
-  const t = stimulus.type || stimulus.stimulus_type || '';
-  if (t === 'primary_source') typeLabel = 'Primary Source';
-  else if (t === 'secondary_source') typeLabel = 'Secondary Source';
-  else if (t === 'data_table') typeLabel = 'Data';
-  else if (t === 'graph') typeLabel = 'Graph';
-  else if (t === 'map') typeLabel = 'Map';
-  else if (t === 'scenario') typeLabel = 'Scenario';
-  else if (t) typeLabel = t.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
-
   const attribution = stimulus.source_attribution || stimulus.source_ref || '';
   const content = stimulus.content || '';
 
@@ -323,13 +479,11 @@ function renderStimulus(stimulus) {
   if (chartData) {
     const chartId = 'stimulus-chart-' + Date.now();
     setTimeout(() => renderChart(chartId, chartData), 50);
-    return `
-      <div class="stimulus-box">
-        ${chartData.title ? `<div class="stimulus-chart-title">${escapeHtml(chartData.title)}</div>` : ''}
-        <canvas id="${chartId}" class="stimulus-chart-canvas"></canvas>
-        ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
-      </div>
-    `;
+    return `<div class="stimulus-box">
+      ${chartData.title ? `<div class="stimulus-chart-title">${escapeHtml(chartData.title)}</div>` : ''}
+      <canvas id="${chartId}" class="stimulus-chart-canvas"></canvas>
+      ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
+    </div>`;
   }
 
   let rendered;
@@ -341,100 +495,42 @@ function renderStimulus(stimulus) {
     rendered = escapeHtml(content);
   }
 
-  return `
-    <div class="stimulus-box">
-      <div class="stimulus-content">${rendered}</div>
-      ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
-    </div>
-  `;
+  return `<div class="stimulus-box">
+    <div class="stimulus-content">${rendered}</div>
+    ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
+  </div>`;
 }
 
 function tryParseChartJson(content) {
   const trimmed = content.trim();
   if (!trimmed.startsWith('{') || !trimmed.includes('chart_type')) return null;
-  try {
-    const data = JSON.parse(trimmed);
-    if (data.chart_type && data.data) return data;
-  } catch {}
+  try { const d = JSON.parse(trimmed); if (d.chart_type && d.data) return d; } catch {}
   return null;
 }
 
-const CHART_COLORS = [
-  '#3b82f6', '#ef4444', '#22c55e', '#f59e0b',
-  '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
-];
+const CHART_COLORS = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316'];
 
 function renderChart(canvasId, chartData) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
-
-  const type = chartData.chart_type === 'scatter' ? 'scatter'
-    : chartData.chart_type === 'bar' ? 'bar' : 'line';
-
-  const xLabels = chartData.data[0]?.values?.map((_, i) => {
-    if (chartData.x_label === 'Year' && chartData.data[0].values.length === 13) {
-      return 2010 + i;
-    }
-    return i;
-  });
-
+  const type = chartData.chart_type === 'scatter' ? 'scatter' : chartData.chart_type === 'bar' ? 'bar' : 'line';
+  const xLabels = chartData.data[0]?.values?.map((_, i) => chartData.x_label === 'Year' && chartData.data[0].values.length === 13 ? 2010 + i : i);
   let datasets;
-
   if (type === 'scatter') {
-    datasets = chartData.data.map((series, idx) => ({
-      label: series.label,
-      data: [{ x: series.values[0], y: series.values[1] }],
-      backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
-      pointRadius: 8,
-      pointHoverRadius: 10,
-    }));
+    datasets = chartData.data.map((s, i) => ({ label: s.label, data: [{ x: s.values[0], y: s.values[1] }], backgroundColor: CHART_COLORS[i % CHART_COLORS.length], pointRadius: 8 }));
   } else {
-    datasets = chartData.data.map((series, idx) => ({
-      label: series.label,
-      data: series.values,
-      borderColor: CHART_COLORS[idx % CHART_COLORS.length],
-      backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] + '20',
-      fill: false,
-      tension: 0.3,
-      pointRadius: 3,
-      yAxisID: idx === chartData.data.length - 1 && chartData.y_label_right ? 'y1' : 'y',
-    }));
+    datasets = chartData.data.map((s, i) => ({ label: s.label, data: s.values, borderColor: CHART_COLORS[i % CHART_COLORS.length], backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + '20', fill: false, tension: 0.3, pointRadius: 3, yAxisID: i === chartData.data.length - 1 && chartData.y_label_right ? 'y1' : 'y' }));
   }
-
   const scales = {};
   if (type !== 'scatter') {
     scales.x = { title: { display: !!chartData.x_label, text: chartData.x_label || '' } };
-    scales.y = {
-      title: { display: !!chartData.y_label_left || !!chartData.y_label, text: chartData.y_label_left || chartData.y_label || '' },
-      position: 'left',
-    };
-    if (chartData.y_label_right) {
-      scales.y1 = {
-        title: { display: true, text: chartData.y_label_right },
-        position: 'right',
-        grid: { drawOnChartArea: false },
-      };
-    }
+    scales.y = { title: { display: !!chartData.y_label_left || !!chartData.y_label, text: chartData.y_label_left || chartData.y_label || '' }, position: 'left' };
+    if (chartData.y_label_right) scales.y1 = { title: { display: true, text: chartData.y_label_right }, position: 'right', grid: { drawOnChartArea: false } };
   } else {
     scales.x = { title: { display: !!chartData.x_label, text: chartData.x_label || '' } };
     scales.y = { title: { display: !!chartData.y_label, text: chartData.y_label || '' } };
   }
-
-  new Chart(canvas, {
-    type,
-    data: {
-      labels: type !== 'scatter' ? xLabels : undefined,
-      datasets,
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16, font: { size: 11 } } },
-      },
-      scales,
-    },
-  });
+  new Chart(canvas, { type, data: { labels: type !== 'scatter' ? xLabels : undefined, datasets }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16, font: { size: 11 } } } }, scales } });
 }
 
 function renderMarkdownTable(text) {
@@ -454,31 +550,24 @@ function renderMarkdownTable(text) {
   return html + '</table>';
 }
 
-// ── Question rendering ──
+// ── MCQ Question rendering ──
 
 function renderQuestion() {
   if (questionQueue.length === 0) {
     showLoading('Loading more questions...');
     refillQueue().then(() => {
-      if (questionQueue.length > 0) {
-        showScreen('quiz');
-        renderQuestion();
-      } else {
-        showError('Could not load more questions. Please try again.');
-      }
+      if (questionQueue.length > 0) { showScreen('quiz'); renderQuestion(); }
+      else { showError('Could not load more questions. Please try again.'); }
     });
     return;
   }
-
   answered = false;
   questionStartTime = Date.now();
   const q = questionQueue[0];
 
-
   const examLeft = document.getElementById('exam-left');
   const examDivider = document.getElementById('exam-divider');
   const examRight = document.getElementById('exam-right');
-
   if (q.stimulus && q.stimulus.content) {
     examLeft.classList.remove('hidden-panel');
     examDivider.classList.remove('hidden-panel');
@@ -492,25 +581,19 @@ function renderQuestion() {
   }
 
   document.getElementById('question-text').textContent = q.stem;
-
   selectedOption = -1;
-
-  const letters = ['A', 'B', 'C', 'D', 'E'];
+  const letters = ['A','B','C','D','E'];
   document.getElementById('options-list').innerHTML = q.options
-    .map((opt, i) =>
-      `<button class="option-btn" data-index="${i}" onclick="selectAnswer(${i})">
-        <span class="option-letter">${letters[i]}</span>
-        <span class="option-text">${escapeHtml(opt)}</span>
-        <span class="option-cross" onclick="event.stopPropagation(); toggleCrossOut(this.parentElement);" title="Cross out">&times;</span>
-      </button>`
-    )
-    .join('');
+    .map((opt, i) => `<button class="option-btn" data-index="${i}" onclick="selectAnswer(${i})">
+      <span class="option-letter">${letters[i]}</span>
+      <span class="option-text">${escapeHtml(opt)}</span>
+      <span class="option-cross" onclick="event.stopPropagation(); toggleCrossOut(this.parentElement);" title="Cross out">&times;</span>
+    </button>`).join('');
 
   document.getElementById('explanation-box').classList.add('hidden');
   document.getElementById('btn-next-inline').classList.add('hidden');
   document.getElementById('btn-check-answer').classList.add('hidden');
 
-  // Notes: restore for this question
   const ta = document.getElementById('notes-textarea');
   if (ta) ta.value = notesMap[currentIndex] || '';
 
@@ -519,32 +602,23 @@ function renderQuestion() {
   const stimScroll = document.querySelector('.exam-stimulus-scroll');
   if (stimScroll) stimScroll.scrollTop = 0;
 
-  if (questionQueue.length <= REFILL_THRESHOLD) {
-    refillQueue();
-  }
+  if (questionQueue.length <= REFILL_THRESHOLD) refillQueue();
 }
 
-// ── Answer selection ──
+// ── MCQ Answer selection ──
 
 function selectAnswer(index) {
   if (answered) return;
   const btn = document.querySelectorAll('.option-btn')[index];
   if (btn && btn.classList.contains('crossed-out')) return;
-
   selectedOption = index;
-
-  const buttons = document.querySelectorAll('.option-btn');
-  buttons.forEach((btn, i) => {
-    btn.classList.toggle('selected', i === index);
-  });
-
+  document.querySelectorAll('.option-btn').forEach((b, i) => b.classList.toggle('selected', i === index));
   document.getElementById('btn-check-answer').classList.remove('hidden');
 }
 
 function checkAnswer() {
   if (answered || selectedOption < 0) return;
   answered = true;
-
   const q = questionQueue[0];
   const index = selectedOption;
   const isCorrect = index === q.correct;
@@ -552,14 +626,12 @@ function checkAnswer() {
   totalAnswered++;
   if (isCorrect) totalCorrect++;
 
-  const buttons = document.querySelectorAll('.option-btn');
-  buttons.forEach((btn, i) => {
+  document.querySelectorAll('.option-btn').forEach((btn, i) => {
     btn.classList.remove('selected');
     btn.classList.add('disabled');
     if (i === q.correct) btn.classList.add('correct');
     else if (i === index && !isCorrect) btn.classList.add('incorrect');
   });
-
   document.getElementById('btn-check-answer').classList.add('hidden');
 
   const explBox = document.getElementById('explanation-box');
@@ -569,22 +641,23 @@ function checkAnswer() {
   explBox.classList.remove('hidden');
   document.getElementById('btn-next-inline').classList.remove('hidden');
 
-  saveAnswer(q, index, isCorrect, timeMs);
+  saveAnswer(q, index, isCorrect, timeMs, 'mcq');
 }
 
-function saveAnswer(q, selectedIndex, isCorrect, timeMs) {
+function saveAnswer(q, selectedIndex, isCorrect, timeMs, itemType) {
   fetch('/api/answer', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       question_id: q.id,
-      subject: COURSES[courseKey]?.subject || '',
-      unit_code: q.unitCode,
-      topic_code: q.topicCode,
+      subject: COURSES[courseKey]?.subject || COURSES[frqCourseKey]?.subject || '',
+      unit_code: q.unitCode || q.unit_code,
+      topic_code: q.topicCode || q.topic_code,
       difficulty: q.difficulty,
+      item_type: itemType || 'mcq',
       stem: q.stem,
-      options: q.options,
-      correct_index: q.correct,
+      options: q.options || [],
+      correct_index: q.correct ?? 0,
       selected_index: selectedIndex,
       is_correct: isCorrect,
       time_ms: timeMs,
@@ -594,8 +667,6 @@ function saveAnswer(q, selectedIndex, isCorrect, timeMs) {
   }).catch(err => console.error('Failed to save answer:', err));
 }
 
-// ── Navigation ──
-
 function nextQuestion() {
   if (!answered) return;
   questionQueue.shift();
@@ -603,56 +674,35 @@ function nextQuestion() {
   renderQuestion();
 }
 
-
 // ── Highlight Tool ──
 
 function toggleHighlightMode() {
   highlightMode = !highlightMode;
   const quiz = document.getElementById('screen-quiz');
   const btn = document.getElementById('btn-highlight');
-
-  if (highlightMode) {
-    quiz.classList.add('highlight-active');
-    btn.classList.add('active');
-  } else {
-    quiz.classList.remove('highlight-active');
-    btn.classList.remove('active');
-  }
+  if (highlightMode) { quiz.classList.add('highlight-active'); btn.classList.add('active'); }
+  else { quiz.classList.remove('highlight-active'); btn.classList.remove('active'); }
 }
 
 function initHighlighter() {
   document.addEventListener('mouseup', (e) => {
     if (!highlightMode) return;
-
     const examBody = document.querySelector('.exam-body-wrapper');
     if (!examBody) return;
-
-    // If clicking directly on an existing highlight, remove it
     const clickedMark = e.target.closest('mark');
     if (clickedMark && examBody.contains(clickedMark)) {
       const parent = clickedMark.parentNode;
-      while (clickedMark.firstChild) {
-        parent.insertBefore(clickedMark.firstChild, clickedMark);
-      }
+      while (clickedMark.firstChild) parent.insertBefore(clickedMark.firstChild, clickedMark);
       parent.removeChild(clickedMark);
       parent.normalize();
       return;
     }
-
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
-
     const range = sel.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-    if (!examBody.contains(container)) return;
-
-    try {
-      const mark = document.createElement('mark');
-      range.surroundContents(mark);
-    } catch {
-      document.execCommand('hiliteColor', false, '#fef08a');
-    }
-
+    if (!examBody.contains(range.commonAncestorContainer)) return;
+    try { const mark = document.createElement('mark'); range.surroundContents(mark); }
+    catch { document.execCommand('hiliteColor', false, '#fef08a'); }
     sel.removeAllRanges();
   });
 }
@@ -663,24 +713,14 @@ function toggleNotesPanel() {
   const panel = document.getElementById('notes-panel');
   const btn = document.getElementById('btn-notes');
   notesOpen = !notesOpen;
-
-  if (notesOpen) {
-    panel.classList.remove('hidden');
-    btn.classList.add('active');
-    const ta = document.getElementById('notes-textarea');
-    if (ta) ta.focus();
-  } else {
-    panel.classList.add('hidden');
-    btn.classList.remove('active');
-  }
+  if (notesOpen) { panel.classList.remove('hidden'); btn.classList.add('active'); document.getElementById('notes-textarea')?.focus(); }
+  else { panel.classList.add('hidden'); btn.classList.remove('active'); }
 }
 
 function initNotes() {
   const ta = document.getElementById('notes-textarea');
   if (!ta) return;
-  ta.addEventListener('input', () => {
-    notesMap[currentIndex] = ta.value;
-  });
+  ta.addEventListener('input', () => { notesMap[currentIndex] = ta.value; });
 }
 
 // ── Draggable divider ──
@@ -688,45 +728,24 @@ function initNotes() {
 function initDivider() {
   const divider = document.getElementById('exam-divider');
   if (!divider) return;
-
-  let dragging = false;
-  let startX = 0;
-  let leftStartWidth = 0;
-
+  let dragging = false, startX = 0, leftStartWidth = 0;
   divider.addEventListener('mousedown', e => {
-    e.preventDefault();
-    dragging = true;
-    startX = e.clientX;
-    const left = document.getElementById('exam-left');
-    leftStartWidth = left.getBoundingClientRect().width;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
+    e.preventDefault(); dragging = true; startX = e.clientX;
+    leftStartWidth = document.getElementById('exam-left').getBoundingClientRect().width;
+    document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
   });
-
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
     const left = document.getElementById('exam-left');
     const body = document.querySelector('.exam-body');
     if (!left || !body) return;
-
-    const bodyWidth = body.getBoundingClientRect().width;
-    const dividerWidth = 5;
-    const minLeft = 200;
-    const minRight = 280;
-    const maxLeft = bodyWidth - dividerWidth - minRight;
-
-    let newWidth = leftStartWidth + (e.clientX - startX);
-    newWidth = Math.max(minLeft, Math.min(maxLeft, newWidth));
-
-    left.style.flex = 'none';
-    left.style.width = newWidth + 'px';
+    const maxLeft = body.getBoundingClientRect().width - 5 - 280;
+    let newWidth = Math.max(200, Math.min(maxLeft, leftStartWidth + (e.clientX - startX)));
+    left.style.flex = 'none'; left.style.width = newWidth + 'px';
   });
-
   document.addEventListener('mouseup', () => {
     if (!dragging) return;
-    dragging = false;
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
+    dragging = false; document.body.style.cursor = ''; document.body.style.userSelect = '';
   });
 }
 
@@ -751,18 +770,12 @@ const COURSE_FRQ_TYPES = {
   'apush': ['frq_short', 'frq_long', 'frq_dbq'],
 };
 
-async function fetchFRQBatch(subject, units, frqType) {
-  const unit = pickRandomUnit(units);
+async function fetchFRQBatch(subject, unitPool, frqType) {
+  const unit = pickRandomUnit(unitPool);
   const res = await fetch(API_PROXY, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      subject,
-      scope: { unit_code: unit },
-      count: 3,
-      difficulty: pickRandomDifficulty(),
-      item_type: frqType,
-    }),
+    body: JSON.stringify({ subject, scope: { unit_code: unit }, count: 3, difficulty: pickRandomDifficulty(), item_type: frqType }),
   });
   if (!res.ok) throw new Error(`API returned ${res.status}`);
   return res.json();
@@ -770,12 +783,12 @@ async function fetchFRQBatch(subject, units, frqType) {
 
 function selectFRQ(key) {
   frqCourseKey = key;
+  courseKey = key;
   frqItems = [];
   frqStimuli = {};
   frqSeenIds = new Set();
   frqIndex = 0;
   frqChosenType = null;
-
   showScreen('frq');
   showFRQPicker();
 }
@@ -783,21 +796,12 @@ function selectFRQ(key) {
 function showFRQPicker() {
   document.getElementById('frq-picker').classList.remove('hidden');
   document.getElementById('frq-body').classList.add('hidden');
-
   const course = COURSES[frqCourseKey];
   const types = COURSE_FRQ_TYPES[frqCourseKey] || ['frq_short'];
-
   document.getElementById('frq-picker-sub').textContent = course.name;
-
-  const container = document.getElementById('frq-picker-options');
-  container.innerHTML = types.map(t => {
+  document.getElementById('frq-picker-options').innerHTML = types.map(t => {
     const info = FRQ_TYPE_INFO[t] || { name: t, desc: '' };
-    return `
-      <button class="frq-picker-btn" onclick="pickFRQType('${t}')">
-        <h3>${info.name}</h3>
-        <p>${info.desc}</p>
-      </button>
-    `;
+    return `<button class="frq-picker-btn" onclick="pickFRQType('${t}')"><h3>${info.name}</h3><p>${info.desc}</p></button>`;
   }).join('');
 }
 
@@ -807,29 +811,20 @@ async function pickFRQType(frqType) {
   showLoading(`Loading ${FRQ_TYPE_INFO[frqType]?.name || 'FRQ'}...`);
 
   try {
-    const units = shuffle(course.units).slice(0, 3);
-    const results = await Promise.all(
-      units.map(u => fetchFRQBatch(course.subject, [u], frqType))
-    );
+    const unitPool = getUnitPool(frqCourseKey, 'frq');
+    const fetchUnits = unitPool.length >= 3 ? unitPool.slice(0, 3) : unitPool;
+    const results = await Promise.all(fetchUnits.map(u => fetchFRQBatch(course.subject, [u], frqType)));
 
     for (const r of results) {
       if (r.stimuli) r.stimuli.forEach(s => { frqStimuli[s.id] = s; });
       if (r.items) {
         for (const item of r.items) {
-          if (!frqSeenIds.has(item.id)) {
-            frqSeenIds.add(item.id);
-            frqItems.push(item);
-          }
+          if (!frqSeenIds.has(item.id)) { frqSeenIds.add(item.id); frqItems.push(item); }
         }
       }
     }
-
     frqItems = shuffle(frqItems);
-
-    if (frqItems.length === 0) {
-      showError('No questions available for this type right now. Try a different type.');
-      return;
-    }
+    if (frqItems.length === 0) { showError('No questions available for this type right now. Try a different type.'); return; }
 
     showScreen('frq');
     document.getElementById('frq-picker').classList.add('hidden');
@@ -842,32 +837,19 @@ async function pickFRQType(frqType) {
 }
 
 function renderFRQ() {
-  if (frqIndex >= frqItems.length) {
-    showFRQPicker();
-    return;
-  }
+  if (frqIndex >= frqItems.length) { showFRQPicker(); return; }
 
   const item = frqItems[frqIndex];
-
-  const stim = item.stimulus
-    || (item.stimulus_id && frqStimuli[item.stimulus_id])
-    || null;
+  const stim = item.stimulus || (item.stimulus_id && frqStimuli[item.stimulus_id]) || null;
 
   const stimEl = document.getElementById('frq-stimulus');
   if (stim && stim.content) {
     stimEl.style.display = '';
     const content = stim.content || '';
     const attribution = stim.source_attribution || stim.source_ref || '';
-    let rendered;
-    if (content.includes('<table') || content.includes('<tr') || content.includes('<div')) {
-      rendered = content;
-    } else {
-      rendered = escapeHtml(content);
-    }
-    stimEl.innerHTML = `
-      <div class="stimulus-content">${rendered}</div>
-      ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
-    `;
+    let rendered = (content.includes('<table') || content.includes('<tr') || content.includes('<div')) ? content : escapeHtml(content);
+    stimEl.innerHTML = `<div class="stimulus-content">${rendered}</div>
+      ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}`;
   } else {
     stimEl.innerHTML = '';
     stimEl.style.display = 'none';
@@ -875,7 +857,6 @@ function renderFRQ() {
 
   document.getElementById('frq-prompt').innerHTML = escapeHtml(item.stem || '');
   document.getElementById('frq-response').value = '';
-
   document.getElementById('frq-show-answer').classList.remove('hidden');
   document.getElementById('frq-model-answer').classList.add('hidden');
   document.getElementById('frq-next').classList.add('hidden');
@@ -883,31 +864,17 @@ function renderFRQ() {
 
 function showFRQAnswer() {
   const item = frqItems[frqIndex];
-
   let modelHtml = '';
-
-  if (item.model_answer) {
-    modelHtml += `<div class="frq-model-text">${escapeHtml(item.model_answer)}</div>`;
-  }
-
+  if (item.model_answer) modelHtml += `<div class="frq-model-text">${escapeHtml(item.model_answer)}</div>`;
   if (item.rubric && Array.isArray(item.rubric)) {
     modelHtml += '<div class="frq-rubric">';
     for (const r of item.rubric) {
-      modelHtml += `
-        <div class="frq-rubric-point">
-          <strong>Point ${r.point}:</strong> ${escapeHtml(r.criteria || '')}
-        </div>
-      `;
-      if (r.exemplar) {
-        modelHtml += `<div class="frq-rubric-exemplar">${escapeHtml(r.exemplar)}</div>`;
-      }
+      modelHtml += `<div class="frq-rubric-point"><strong>Point ${r.point}:</strong> ${escapeHtml(r.criteria || '')}</div>`;
+      if (r.exemplar) modelHtml += `<div class="frq-rubric-exemplar">${escapeHtml(r.exemplar)}</div>`;
     }
     modelHtml += '</div>';
   }
-
-  if (!modelHtml) {
-    modelHtml = '<div class="frq-model-text">No model answer available.</div>';
-  }
+  if (!modelHtml) modelHtml = '<div class="frq-model-text">No model answer available.</div>';
 
   document.getElementById('frq-model-text').innerHTML = modelHtml;
   document.getElementById('frq-model-answer').classList.remove('hidden');
@@ -917,11 +884,8 @@ function showFRQAnswer() {
 
 function nextFRQ() {
   frqIndex++;
-  if (frqIndex < frqItems.length) {
-    renderFRQ();
-  } else {
-    showFRQPicker();
-  }
+  if (frqIndex < frqItems.length) renderFRQ();
+  else showFRQPicker();
 }
 
 init();

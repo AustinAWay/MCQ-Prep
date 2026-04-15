@@ -49,36 +49,70 @@
           <p class="subtitle">Randomized practice questions to keep you sharp</p>
         </div>
         <div class="course-list">
-          <div class="course-row">
-            <div class="course-info">
-              <h2>AP Human Geography</h2>
-              <p class="course-desc">Population, culture, political organization, agriculture, urbanization, and industrialization</p>
+
+          <div class="course-row-wrap">
+            <div class="course-row">
+              <div class="course-info">
+                <h2>AP Human Geography</h2>
+                <p class="course-desc">Population, culture, political organization, agriculture, urbanization, and industrialization</p>
+              </div>
+              <div class="course-actions">
+                <button class="course-btn course-btn-mcq" onclick="showUnitPicker('ap-geo','mcq')">MCQ</button>
+                <button class="course-btn course-btn-frq" onclick="showUnitPicker('ap-geo','frq')">FRQ</button>
+              </div>
             </div>
-            <div class="course-actions">
-              <button class="course-btn course-btn-mcq" onclick="selectCourse('ap-geo')">MCQ</button>
-              <button class="course-btn course-btn-frq" onclick="selectFRQ('ap-geo')">FRQ</button>
-            </div>
+            <div class="course-stats" id="stats-ap-geo"></div>
           </div>
-          <div class="course-row">
-            <div class="course-info">
-              <h2>AP World History</h2>
-              <p class="course-desc">Global interactions from 1200 CE to the present across civilizations and eras</p>
+
+          <div class="course-row-wrap">
+            <div class="course-row">
+              <div class="course-info">
+                <h2>AP World History</h2>
+                <p class="course-desc">Global interactions from 1200 CE to the present across civilizations and eras</p>
+              </div>
+              <div class="course-actions">
+                <button class="course-btn course-btn-mcq" onclick="showUnitPicker('ap-world','mcq')">MCQ</button>
+                <button class="course-btn course-btn-frq" onclick="showUnitPicker('ap-world','frq')">FRQ</button>
+              </div>
             </div>
-            <div class="course-actions">
-              <button class="course-btn course-btn-mcq" onclick="selectCourse('ap-world')">MCQ</button>
-              <button class="course-btn course-btn-frq" onclick="selectFRQ('ap-world')">FRQ</button>
-            </div>
+            <div class="course-stats" id="stats-ap-world"></div>
           </div>
-          <div class="course-row">
-            <div class="course-info">
-              <h2>AP U.S. History</h2>
-              <p class="course-desc">American history from pre-Columbian societies through the modern era</p>
+
+          <div class="course-row-wrap">
+            <div class="course-row">
+              <div class="course-info">
+                <h2>AP U.S. History</h2>
+                <p class="course-desc">American history from pre-Columbian societies through the modern era</p>
+              </div>
+              <div class="course-actions">
+                <button class="course-btn course-btn-mcq" onclick="showUnitPicker('apush','mcq')">MCQ</button>
+                <button class="course-btn course-btn-frq" onclick="showUnitPicker('apush','frq')">FRQ</button>
+              </div>
             </div>
-            <div class="course-actions">
-              <button class="course-btn course-btn-mcq" onclick="selectCourse('apush')">MCQ</button>
-              <button class="course-btn course-btn-frq" onclick="selectFRQ('apush')">FRQ</button>
-            </div>
+            <div class="course-stats" id="stats-apush"></div>
           </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Unit Picker Screen -->
+    <div id="screen-units" class="screen">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+      <div class="units-container">
+        <button class="units-back" onclick="goHome()">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back
+        </button>
+        <h1 id="units-title" class="units-title"></h1>
+        <p class="units-subtitle">Select units to practice, or choose adaptive mode</p>
+
+        <div class="unit-grid" id="unit-grid"></div>
+
+        <div class="units-footer">
+          <button class="units-start-btn" id="units-start-btn" onclick="startFromUnitPicker()">Start</button>
         </div>
       </div>
     </div>
@@ -147,7 +181,6 @@
 
     <!-- Quiz Screen -->
     <div id="screen-quiz" class="screen">
-      <!-- Header Bar (dark, matching CB exam) -->
       <div class="exam-header">
         <div class="exam-header-left">
           <button class="exam-hdr-btn" onclick="goHome()">
@@ -168,35 +201,24 @@
         </div>
       </div>
 
-      <!-- Split Panel Body -->
       <div class="exam-body-wrapper">
         <div class="exam-body">
-          <!-- Left: Stimulus -->
           <div class="exam-left" id="exam-left">
             <div class="exam-stimulus-scroll" id="stimulus-container"></div>
           </div>
-
-          <!-- Draggable Divider -->
           <div class="exam-divider" id="exam-divider">
-            <div class="exam-divider-handle">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
+            <div class="exam-divider-handle"></div>
           </div>
-
-          <!-- Right: Question -->
           <div class="exam-right" id="exam-right">
             <div class="exam-question-scroll">
               <div class="exam-question-body">
                 <h2 class="question-text" id="question-text"></h2>
                 <div class="options-list" id="options-list"></div>
-
                 <button class="btn-check-answer hidden" id="btn-check-answer" onclick="checkAnswer()">Check Answer</button>
-
                 <div class="explanation-box hidden" id="explanation-box">
                   <div class="explanation-icon" id="explanation-icon"></div>
                   <p id="explanation-text"></p>
                 </div>
-
                 <button class="btn-next-inline hidden" id="btn-next-inline" onclick="nextQuestion()">
                   Next Question
                   <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -205,8 +227,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Notes Panel -->
         <div class="notes-panel hidden" id="notes-panel">
           <div class="notes-header">
             <span class="notes-title">Notes</span>

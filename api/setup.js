@@ -33,6 +33,7 @@ export default async function handler(req, res) {
         unit_code TEXT,
         topic_code TEXT,
         difficulty TEXT,
+        item_type TEXT DEFAULT 'mcq',
         stem TEXT NOT NULL,
         options JSONB NOT NULL,
         correct_index INTEGER NOT NULL,
@@ -43,6 +44,13 @@ export default async function handler(req, res) {
         explanation TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
+    `;
+
+    await sql`
+      DO $$ BEGIN
+        ALTER TABLE answers ADD COLUMN IF NOT EXISTS item_type TEXT DEFAULT 'mcq';
+      EXCEPTION WHEN duplicate_column THEN NULL;
+      END $$
     `;
 
     return res.status(200).json({ ok: true, message: 'Tables created' });
