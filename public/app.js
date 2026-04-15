@@ -737,12 +737,22 @@ let frqStimuli = {};
 let frqIndex = 0;
 let frqCourseKey = null;
 let frqSeenIds = new Set();
+let frqChosenType = null;
 
-const FRQ_TYPES = ['frq_short', 'frq_long'];
+const FRQ_TYPE_INFO = {
+  frq_short: { name: 'Short Answer (SAQ)', desc: 'Brief responses to 2-3 part questions using historical evidence.' },
+  frq_long: { name: 'Long Essay (LEQ)', desc: 'Full essay with thesis, evidence, and analysis.' },
+  frq_dbq: { name: 'Document-Based (DBQ)', desc: 'Essay using a set of primary source documents.' },
+};
 
-async function fetchFRQBatch(subject, units) {
+const COURSE_FRQ_TYPES = {
+  'ap-geo': ['frq_short'],
+  'ap-world': ['frq_short', 'frq_long', 'frq_dbq'],
+  'apush': ['frq_short', 'frq_long', 'frq_dbq'],
+};
+
+async function fetchFRQBatch(subject, units, frqType) {
   const unit = pickRandomUnit(units);
-  const frqType = FRQ_TYPES[Math.floor(Math.random() * FRQ_TYPES.length)];
   const res = await fetch(API_PROXY, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -758,20 +768,48 @@ async function fetchFRQBatch(subject, units) {
   return res.json();
 }
 
-async function selectFRQ(key) {
+function selectFRQ(key) {
   frqCourseKey = key;
-  const course = COURSES[key];
-  showLoading(`Loading ${course.name} FRQs...`);
-
   frqItems = [];
   frqStimuli = {};
   frqSeenIds = new Set();
   frqIndex = 0;
+  frqChosenType = null;
+
+  showScreen('frq');
+  showFRQPicker();
+}
+
+function showFRQPicker() {
+  document.getElementById('frq-picker').classList.remove('hidden');
+  document.getElementById('frq-body').classList.add('hidden');
+
+  const course = COURSES[frqCourseKey];
+  const types = COURSE_FRQ_TYPES[frqCourseKey] || ['frq_short'];
+
+  document.getElementById('frq-picker-sub').textContent = course.name;
+
+  const container = document.getElementById('frq-picker-options');
+  container.innerHTML = types.map(t => {
+    const info = FRQ_TYPE_INFO[t] || { name: t, desc: '' };
+    return `
+      <button class="frq-picker-btn" onclick="pickFRQType('${t}')">
+        <h3>${info.name}</h3>
+        <p>${info.desc}</p>
+      </button>
+    `;
+  }).join('');
+}
+
+async function pickFRQType(frqType) {
+  frqChosenType = frqType;
+  const course = COURSES[frqCourseKey];
+  showLoading(`Loading ${FRQ_TYPE_INFO[frqType]?.name || 'FRQ'}...`);
 
   try {
     const units = shuffle(course.units).slice(0, 3);
     const results = await Promise.all(
-      units.map(u => fetchFRQBatch(course.subject, [u]))
+      units.map(u => fetchFRQBatch(course.subject, [u], frqType))
     );
 
     for (const r of results) {
@@ -789,11 +827,13 @@ async function selectFRQ(key) {
     frqItems = shuffle(frqItems);
 
     if (frqItems.length === 0) {
-      showError('No FRQ items found for ' + course.name + ' right now. Try again or pick a different course.');
+      showError('No questions available for this type right now. Try a different type.');
       return;
     }
 
     showScreen('frq');
+    document.getElementById('frq-picker').classList.add('hidden');
+    document.getElementById('frq-body').classList.remove('hidden');
     renderFRQ();
   } catch (err) {
     console.error('Failed to load FRQs:', err);
@@ -803,25 +843,7 @@ async function selectFRQ(key) {
 
 function renderFRQ() {
   if (frqIndex >= frqItems.length) {
-    showLoading('Loading more FRQs...');
-    const course = COURSES[frqCourseKey];
-    fetchFRQBatch(course.subject, course.units).then(r => {
-      if (r.stimuli) r.stimuli.forEach(s => { frqStimuli[s.id] = s; });
-      if (r.items) {
-        for (const item of r.items) {
-          if (!frqSeenIds.has(item.id)) {
-            frqSeenIds.add(item.id);
-            frqItems.push(item);
-          }
-        }
-      }
-      if (frqIndex < frqItems.length) {
-        showScreen('frq');
-        renderFRQ();
-      } else {
-        showError('No more FRQs available right now.');
-      }
-    }).catch(() => showError('Could not load more FRQs.'));
+    showFRQPicker();
     return;
   }
 
@@ -895,7 +917,11 @@ function showFRQAnswer() {
 
 function nextFRQ() {
   frqIndex++;
-  renderFRQ();
+  if (frqIndex < frqItems.length) {
+    renderFRQ();
+  } else {
+    showFRQPicker();
+  }
 }
 
 init();
