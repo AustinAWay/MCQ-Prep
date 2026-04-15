@@ -733,55 +733,66 @@ function initDivider() {
 // ── FRQ Mode ──
 
 let frqItems = [];
+let frqStimuli = {};
 let frqIndex = 0;
 let frqCourseKey = null;
+let frqSeenIds = new Set();
+
+const FRQ_TYPES = ['frq_short', 'frq_long'];
+
+async function fetchFRQBatch(subject, units) {
+  const unit = pickRandomUnit(units);
+  const frqType = FRQ_TYPES[Math.floor(Math.random() * FRQ_TYPES.length)];
+  const res = await fetch(API_PROXY, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      subject,
+      scope: { unit_code: unit },
+      count: 3,
+      difficulty: pickRandomDifficulty(),
+      item_type: frqType,
+    }),
+  });
+  if (!res.ok) throw new Error(`API returned ${res.status}`);
+  return res.json();
+}
 
 async function selectFRQ(key) {
   frqCourseKey = key;
   const course = COURSES[key];
   showLoading(`Loading ${course.name} FRQs...`);
 
+  frqItems = [];
+  frqStimuli = {};
+  frqSeenIds = new Set();
+  frqIndex = 0;
+
   try {
-    const res = await fetch(API_PROXY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        _endpoint: '/api/tests',
-        subject: course.subject,
-      }),
-    });
-    const data = await res.json();
+    const units = shuffle(course.units).slice(0, 3);
+    const results = await Promise.all(
+      units.map(u => fetchFRQBatch(course.subject, [u]))
+    );
 
-    if (data.detail) {
-      showError('FRQ practice for ' + course.name + ' is not available yet. The question bank is still being built -- check back soon.');
-      return;
-    }
-
-    frqItems = [];
-    const meta = data.section_metadata || {};
-
-    for (const [sectionKey, section] of Object.entries(meta)) {
-      if (!section.items) continue;
-      for (const item of section.items) {
-        if (item.type && item.type.startsWith('frq')) {
-          frqItems.push({
-            id: item.id,
-            type: item.type,
-            title: item.title || section.label || 'Free Response',
-            points: item.points || 0,
-            note: item.note || '',
-            sectionLabel: section.label || sectionKey,
-          });
+    for (const r of results) {
+      if (r.stimuli) r.stimuli.forEach(s => { frqStimuli[s.id] = s; });
+      if (r.items) {
+        for (const item of r.items) {
+          if (!frqSeenIds.has(item.id)) {
+            frqSeenIds.add(item.id);
+            frqItems.push(item);
+          }
         }
       }
     }
 
+    frqItems = shuffle(frqItems);
+
     if (frqItems.length === 0) {
-      showError('No FRQ items found for ' + course.name + '. Check back soon.');
+      showError('No FRQ items found for ' + course.name + ' right now. Try again or pick a different course.');
       return;
     }
 
-    frqIndex = 0;
     showScreen('frq');
     renderFRQ();
   } catch (err) {
@@ -792,47 +803,94 @@ async function selectFRQ(key) {
 
 function renderFRQ() {
   if (frqIndex >= frqItems.length) {
-    goHome();
+    showLoading('Loading more FRQs...');
+    const course = COURSES[frqCourseKey];
+    fetchFRQBatch(course.subject, course.units).then(r => {
+      if (r.stimuli) r.stimuli.forEach(s => { frqStimuli[s.id] = s; });
+      if (r.items) {
+        for (const item of r.items) {
+          if (!frqSeenIds.has(item.id)) {
+            frqSeenIds.add(item.id);
+            frqItems.push(item);
+          }
+        }
+      }
+      if (frqIndex < frqItems.length) {
+        showScreen('frq');
+        renderFRQ();
+      } else {
+        showError('No more FRQs available right now.');
+      }
+    }).catch(() => showError('Could not load more FRQs.'));
     return;
   }
 
   const item = frqItems[frqIndex];
-  const isSAQ = item.type === 'frq_short';
-  const isLEQ = item.type === 'frq_long';
+
+  const stim = item.stimulus
+    || (item.stimulus_id && frqStimuli[item.stimulus_id])
+    || null;
 
   const stimEl = document.getElementById('frq-stimulus');
-  stimEl.innerHTML = `
-    <div style="padding: 8px 0;">
-      <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary); margin-bottom: 12px;">
-        ${escapeHtml(item.sectionLabel)}
-      </div>
-      <div style="font-size: 1rem; font-weight: 600; margin-bottom: 8px; color: var(--text);">
-        ${escapeHtml(item.title)}
-      </div>
-      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
-        ${item.points} point${item.points !== 1 ? 's' : ''}
-      </div>
-      ${item.note ? `<div style="font-size: 0.82rem; color: var(--text-muted); font-style: italic;">${escapeHtml(item.note)}</div>` : ''}
-    </div>
-  `;
+  if (stim && stim.content) {
+    stimEl.style.display = '';
+    const content = stim.content || '';
+    const attribution = stim.source_attribution || stim.source_ref || '';
+    let rendered;
+    if (content.includes('<table') || content.includes('<tr') || content.includes('<div')) {
+      rendered = content;
+    } else {
+      rendered = escapeHtml(content);
+    }
+    stimEl.innerHTML = `
+      <div class="stimulus-content">${rendered}</div>
+      ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}
+    `;
+  } else {
+    stimEl.innerHTML = '';
+    stimEl.style.display = 'none';
+  }
 
-  const promptText = isSAQ
-    ? 'Write a short answer response. Address each part of the question with specific historical evidence.'
-    : 'Write a long essay response. Include a thesis, evidence, and analysis.';
-
-  document.getElementById('frq-prompt').textContent = promptText;
+  document.getElementById('frq-prompt').innerHTML = escapeHtml(item.stem || '');
   document.getElementById('frq-response').value = '';
-  document.getElementById('frq-response').placeholder = isSAQ
-    ? 'Type your short answer here...'
-    : 'Type your essay here...';
 
-  document.getElementById('frq-show-answer').classList.add('hidden');
+  document.getElementById('frq-show-answer').classList.remove('hidden');
   document.getElementById('frq-model-answer').classList.add('hidden');
-  document.getElementById('frq-next').classList.remove('hidden');
+  document.getElementById('frq-next').classList.add('hidden');
 }
 
 function showFRQAnswer() {
-  // placeholder for when API provides model answers
+  const item = frqItems[frqIndex];
+
+  let modelHtml = '';
+
+  if (item.model_answer) {
+    modelHtml += `<div class="frq-model-text">${escapeHtml(item.model_answer)}</div>`;
+  }
+
+  if (item.rubric && Array.isArray(item.rubric)) {
+    modelHtml += '<div class="frq-rubric">';
+    for (const r of item.rubric) {
+      modelHtml += `
+        <div class="frq-rubric-point">
+          <strong>Point ${r.point}:</strong> ${escapeHtml(r.criteria || '')}
+        </div>
+      `;
+      if (r.exemplar) {
+        modelHtml += `<div class="frq-rubric-exemplar">${escapeHtml(r.exemplar)}</div>`;
+      }
+    }
+    modelHtml += '</div>';
+  }
+
+  if (!modelHtml) {
+    modelHtml = '<div class="frq-model-text">No model answer available.</div>';
+  }
+
+  document.getElementById('frq-model-text').innerHTML = modelHtml;
+  document.getElementById('frq-model-answer').classList.remove('hidden');
+  document.getElementById('frq-show-answer').classList.add('hidden');
+  document.getElementById('frq-next').classList.remove('hidden');
 }
 
 function nextFRQ() {
