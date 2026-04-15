@@ -48,21 +48,74 @@
           <h1>AP Exam Prep</h1>
           <p class="subtitle">Randomized practice questions to keep you sharp</p>
         </div>
-        <div class="course-grid">
-          <button class="course-card" data-course="ap-geo" onclick="selectCourse('ap-geo')">
-            <h2>AP Human Geography</h2>
-            <p class="course-desc">Population, culture, political organization, agriculture, urbanization, and industrialization</p>
+        <div class="course-list">
+          <div class="course-row">
+            <div class="course-info">
+              <h2>AP Human Geography</h2>
+              <p class="course-desc">Population, culture, political organization, agriculture, urbanization, and industrialization</p>
+            </div>
+            <div class="course-actions">
+              <button class="course-btn course-btn-mcq" onclick="selectCourse('ap-geo')">MCQ</button>
+              <button class="course-btn course-btn-frq" onclick="selectFRQ('ap-geo')">FRQ</button>
+            </div>
+          </div>
+          <div class="course-row">
+            <div class="course-info">
+              <h2>AP World History</h2>
+              <p class="course-desc">Global interactions from 1200 CE to the present across civilizations and eras</p>
+            </div>
+            <div class="course-actions">
+              <button class="course-btn course-btn-mcq" onclick="selectCourse('ap-world')">MCQ</button>
+              <button class="course-btn course-btn-frq" onclick="selectFRQ('ap-world')">FRQ</button>
+            </div>
+          </div>
+          <div class="course-row">
+            <div class="course-info">
+              <h2>AP U.S. History</h2>
+              <p class="course-desc">American history from pre-Columbian societies through the modern era</p>
+            </div>
+            <div class="course-actions">
+              <button class="course-btn course-btn-mcq" onclick="selectCourse('apush')">MCQ</button>
+              <button class="course-btn course-btn-frq" onclick="selectFRQ('apush')">FRQ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRQ Quiz Screen -->
+    <div id="screen-frq" class="screen">
+      <div class="exam-header">
+        <div class="exam-header-left">
+          <button class="exam-hdr-btn" onclick="goHome()">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Exit
           </button>
-          <button class="course-card" data-course="ap-world" onclick="selectCourse('ap-world')">
-            <h2>AP World History</h2>
-            <p class="course-desc">Global interactions from 1200 CE to the present across civilizations and eras</p>
-          </button>
-          <button class="course-card" data-course="apush" onclick="selectCourse('apush')">
-            <h2>AP U.S. History</h2>
-            <p class="course-desc">American history from pre-Columbian societies through the modern era</p>
+        </div>
+        <div class="exam-header-center"></div>
+        <div class="exam-header-right"></div>
+      </div>
+
+      <div class="frq-body">
+        <div class="frq-left" id="frq-stimulus"></div>
+        <div class="frq-right">
+          <div class="frq-prompt" id="frq-prompt"></div>
+          <textarea class="frq-response" id="frq-response" placeholder="Type your response here..."></textarea>
+          <div class="frq-actions">
+            <button class="btn-next-inline hidden" id="frq-show-answer" onclick="showFRQAnswer()">Show Model Answer</button>
+          </div>
+          <div class="frq-model-answer hidden" id="frq-model-answer">
+            <div class="frq-model-label">Model Answer</div>
+            <div class="frq-model-text" id="frq-model-text"></div>
+          </div>
+          <button class="btn-next-inline hidden" id="frq-next" onclick="nextFRQ()">
+            Next Question
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
       </div>
+
+      <div class="exam-footer"></div>
     </div>
 
     <!-- Loading Screen -->

@@ -730,4 +730,106 @@ function initDivider() {
   });
 }
 
+// ── FRQ Mode ──
+
+let frqItems = [];
+let frqIndex = 0;
+let frqCourseKey = null;
+
+async function selectFRQ(key) {
+  frqCourseKey = key;
+  const course = COURSES[key];
+  showLoading(`Loading ${course.name} FRQs...`);
+
+  try {
+    const res = await fetch(API_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        _endpoint: '/api/tests',
+        subject: course.subject,
+      }),
+    });
+    const data = await res.json();
+
+    frqItems = [];
+    const meta = data.section_metadata || {};
+
+    for (const [sectionKey, section] of Object.entries(meta)) {
+      if (!section.items) continue;
+      for (const item of section.items) {
+        if (item.type && item.type.startsWith('frq')) {
+          frqItems.push({
+            id: item.id,
+            type: item.type,
+            title: item.title || section.label || 'Free Response',
+            points: item.points || 0,
+            note: item.note || '',
+            sectionLabel: section.label || sectionKey,
+          });
+        }
+      }
+    }
+
+    if (frqItems.length === 0) throw new Error('No FRQ items found.');
+
+    frqIndex = 0;
+    showScreen('frq');
+    renderFRQ();
+  } catch (err) {
+    console.error('Failed to load FRQs:', err);
+    showError(err.message);
+  }
+}
+
+function renderFRQ() {
+  if (frqIndex >= frqItems.length) {
+    goHome();
+    return;
+  }
+
+  const item = frqItems[frqIndex];
+  const isSAQ = item.type === 'frq_short';
+  const isLEQ = item.type === 'frq_long';
+
+  const stimEl = document.getElementById('frq-stimulus');
+  stimEl.innerHTML = `
+    <div style="padding: 8px 0;">
+      <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary); margin-bottom: 12px;">
+        ${escapeHtml(item.sectionLabel)}
+      </div>
+      <div style="font-size: 1rem; font-weight: 600; margin-bottom: 8px; color: var(--text);">
+        ${escapeHtml(item.title)}
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
+        ${item.points} point${item.points !== 1 ? 's' : ''}
+      </div>
+      ${item.note ? `<div style="font-size: 0.82rem; color: var(--text-muted); font-style: italic;">${escapeHtml(item.note)}</div>` : ''}
+    </div>
+  `;
+
+  const promptText = isSAQ
+    ? 'Write a short answer response. Address each part of the question with specific historical evidence.'
+    : 'Write a long essay response. Include a thesis, evidence, and analysis.';
+
+  document.getElementById('frq-prompt').textContent = promptText;
+  document.getElementById('frq-response').value = '';
+  document.getElementById('frq-response').placeholder = isSAQ
+    ? 'Type your short answer here...'
+    : 'Type your essay here...';
+
+  document.getElementById('frq-show-answer').classList.add('hidden');
+  document.getElementById('frq-model-answer').classList.add('hidden');
+  document.getElementById('frq-next').classList.remove('hidden');
+}
+
+function showFRQAnswer() {
+  // placeholder for when API provides model answers
+}
+
+function nextFRQ() {
+  frqIndex++;
+  renderFRQ();
+}
+
 init();

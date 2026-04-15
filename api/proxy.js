@@ -10,14 +10,18 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server misconfigured' });
   }
 
+  const endpoint = req.body._endpoint || '/v1/items';
+  const body = { ...req.body };
+  delete body._endpoint;
+
   try {
-    const upstream = await fetch(`${API_BASE}/v1/items`, {
+    const upstream = await fetch(`${API_BASE}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': API_KEY,
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(body),
     });
 
     const data = await upstream.json();
