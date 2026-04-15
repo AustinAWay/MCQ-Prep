@@ -841,9 +841,33 @@ function renderFRQ() {
 
   const item = frqItems[frqIndex];
   const stim = item.stimulus || (item.stimulus_id && frqStimuli[item.stimulus_id]) || null;
+  const docs = item.documents || [];
 
   const stimEl = document.getElementById('frq-stimulus');
-  if (stim && stim.content) {
+
+  if (docs.length > 0) {
+    stimEl.style.display = '';
+    let html = '';
+    for (const doc of docs) {
+      html += `<div class="frq-document">`;
+      html += `<div class="frq-doc-header">Document ${doc.doc_number || ''}</div>`;
+      if (doc.title || doc.author || doc.date) {
+        let meta = '';
+        if (doc.title) meta += `<strong>${escapeHtml(doc.title)}</strong>`;
+        if (doc.author) meta += (meta ? ' — ' : '') + escapeHtml(doc.author);
+        if (doc.date) meta += (meta ? ', ' : '') + escapeHtml(doc.date);
+        html += `<div class="frq-doc-meta">${meta}</div>`;
+      }
+      if (doc.content) {
+        html += `<div class="frq-doc-content">${escapeHtml(doc.content)}</div>`;
+      }
+      if (doc.source_ref || doc.attribution) {
+        html += `<div class="stimulus-attribution">${escapeHtml(doc.source_ref || doc.attribution)}</div>`;
+      }
+      html += `</div>`;
+    }
+    stimEl.innerHTML = html;
+  } else if (stim && stim.content) {
     stimEl.style.display = '';
     const content = stim.content || '';
     const attribution = stim.source_attribution || stim.source_ref || '';
@@ -855,7 +879,10 @@ function renderFRQ() {
     stimEl.style.display = 'none';
   }
 
-  document.getElementById('frq-prompt').innerHTML = escapeHtml(item.stem || '');
+  const stemText = item.stem || '';
+  const stemHtml = escapeHtml(stemText).replace(/\n/g, '<br>').replace(/•/g, '<br>•');
+  document.getElementById('frq-prompt').innerHTML = stemHtml;
+
   document.getElementById('frq-response').value = '';
   document.getElementById('frq-show-answer').classList.remove('hidden');
   document.getElementById('frq-model-answer').classList.add('hidden');

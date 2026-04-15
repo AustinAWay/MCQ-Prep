@@ -712,6 +712,37 @@ body {
   flex-direction: column;
 }
 
+/* --- FRQ Documents (DBQ) --- */
+.frq-document {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+}
+
+.frq-doc-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.frq-doc-meta {
+  font-size: 0.82rem;
+  color: var(--text);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.frq-doc-content {
+  font-size: 0.88rem;
+  line-height: 1.75;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
 .frq-prompt {
   font-size: 0.95rem;
   line-height: 1.7;
