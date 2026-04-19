@@ -97,12 +97,33 @@ async function generateRubric({ subject, frqType, units, promptText, stimulus, d
   return callClaudeJson({ systemPrompt, userMessage, maxTokens: 2500 });
 }
 
+async function ensureTables(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS frq_rubrics (
+      question_id TEXT PRIMARY KEY,
+      subject TEXT NOT NULL,
+      frq_type TEXT NOT NULL,
+      unit_code TEXT,
+      rubric_json JSONB NOT NULL,
+      model_answer TEXT,
+      source TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!process.env.DATABASE_URL) {
+    return res.status(503).json({ error: 'DATABASE_URL is not configured on the server.', code: 'missing_db' });
+  }
+
   const sql = neon(process.env.DATABASE_URL);
+  try { await ensureTables(sql); } catch (e) { console.error('ensureTables failed:', e.message); }
+
   const userId = await requireUser(req, sql);
   if (!userId) return res.status(401).json({ error: 'Not logged in' });
 
@@ -132,6 +153,13 @@ export default async function handler(req, res) {
         rubric: cached[0].rubric_json,
         model_answer: cached[0].model_answer,
         source: cached[0].source,
+      });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY && !(Array.isArray(upstream_rubric) && upstream_rubric.length > 0)) {
+      return res.status(503).json({
+        error: 'Rubric generation requires ANTHROPIC_API_KEY. Add it to your Vercel project env and redeploy.',
+        code: 'missing_api_key',
       });
     }
 
@@ -171,6 +199,11 @@ export default async function handler(req, res) {
     return res.status(200).json({ rubric, model_answer: modelAnswer, source: 'generated' });
   } catch (err) {
     console.error('rubric error:', err);
-    return res.status(500).json({ error: err.message });
+    const msg = err && err.message ? err.message : String(err);
+    let code = 'rubric_failed';
+    if (/ANTHROPIC_API_KEY/i.test(msg)) code = 'missing_api_key';
+    else if (/Anthropic API error/i.test(msg)) code = 'anthropic_error';
+    else if (/parse JSON/i.test(msg)) code = 'parse_error';
+    return res.status(500).json({ error: msg, code });
   }
 }

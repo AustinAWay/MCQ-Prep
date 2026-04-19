@@ -828,8 +828,76 @@ body {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
   margin-bottom: 16px;
 }
+
+.btn-frq-submit {
+  font-family: inherit;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(26, 86, 219, 0.18),
+    0 6px 16px rgba(26, 86, 219, 0.22);
+  transition: transform 0.08s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  letter-spacing: 0.01em;
+}
+.btn-frq-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 2px 4px rgba(26, 86, 219, 0.22),
+    0 10px 24px rgba(26, 86, 219, 0.28);
+  filter: brightness(1.03);
+}
+.btn-frq-submit:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(26, 86, 219, 0.2);
+}
+.btn-frq-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  filter: saturate(0.7);
+  box-shadow: none;
+}
+.btn-frq-submit.hidden { display: none; }
+.btn-frq-submit .btn-frq-icon {
+  flex-shrink: 0;
+  opacity: 0.95;
+}
+.btn-frq-submit .btn-frq-label {
+  line-height: 1;
+}
+
+.btn-frq-secondary {
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  padding: 11px 18px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.btn-frq-secondary:hover {
+  background: var(--primary-glow);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.btn-frq-secondary.hidden { display: none; }
 
 .frq-grading {
   margin-bottom: 16px;
@@ -858,12 +926,58 @@ body {
 }
 
 .frq-grade-error {
-  padding: 14px 18px;
+  padding: 16px 20px;
   background: var(--incorrect-bg);
   border: 1px solid var(--incorrect-border);
-  color: var(--incorrect);
+  color: var(--text);
   border-radius: 10px;
   font-size: 0.9rem;
+  line-height: 1.55;
+}
+.frq-grade-error-title {
+  font-weight: 700;
+  color: var(--incorrect);
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.frq-grade-error-title::before {
+  content: "!";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--incorrect);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.frq-grade-error p { margin: 6px 0; }
+.frq-grade-error ol {
+  margin: 8px 0 8px 22px;
+  padding: 0;
+}
+.frq-grade-error ol li { margin: 4px 0; }
+.frq-grade-error code {
+  font-family: 'SFMono-Regular', Menlo, monospace;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.frq-grade-error-detail {
+  margin-top: 10px !important;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+.frq-grade-error-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 .frq-grade {

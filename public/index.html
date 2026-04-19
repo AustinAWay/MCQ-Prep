@@ -145,8 +145,13 @@
           <div class="frq-prompt" id="frq-prompt"></div>
           <textarea class="frq-response" id="frq-response" placeholder="Type your response here..."></textarea>
           <div class="frq-actions">
-            <button class="btn-check-answer" id="frq-submit" onclick="submitFRQForGrading()">Submit for Grading</button>
-            <button class="btn-next-inline" id="frq-show-answer" onclick="showFRQAnswer()">Show Model Answer</button>
+            <button class="btn-frq-submit" id="frq-submit" onclick="submitFRQForGrading()">
+              <svg class="btn-frq-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M3 10.5L7.5 15L17 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="btn-frq-label">Submit for Grading</span>
+            </button>
+            <button class="btn-frq-secondary" id="frq-show-answer" onclick="showFRQAnswer()">Show Model Answer</button>
           </div>
           <div class="frq-grading hidden" id="frq-grading">
             <div class="frq-grading-loading hidden" id="frq-grading-loading">

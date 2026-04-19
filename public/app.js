@@ -975,11 +975,24 @@ async function submitFRQForGrading() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+
+    let payloadBody = null;
+    let rawText = '';
+    try { payloadBody = await res.clone().json(); }
+    catch { try { rawText = await res.text(); } catch {} }
+
     if (!res.ok) {
-      const errBody = await res.json().catch(() => ({}));
-      throw new Error(errBody.error || `Grading failed (${res.status})`);
+      const err = new Error(
+        (payloadBody && payloadBody.error) ||
+        (rawText && rawText.slice(0, 400)) ||
+        `Grading failed (HTTP ${res.status})`
+      );
+      err.code = payloadBody && payloadBody.code;
+      err.status = res.status;
+      throw err;
     }
-    const data = await res.json();
+
+    const data = payloadBody || {};
     lastGradeRubric = data.rubric || null;
     lastGradeModelAnswer = data.model_answer || null;
     loadingEl.classList.add('hidden');
@@ -988,12 +1001,57 @@ async function submitFRQForGrading() {
     submitBtn.classList.add('hidden');
   } catch (err) {
     loadingEl.classList.add('hidden');
-    resultEl.innerHTML = `<div class="frq-grade-error">Grading failed: ${escapeHtml(err.message)}. You can still view the model answer.</div>`;
+    resultEl.innerHTML = renderGradingError(err);
     submitBtn.disabled = false;
     submitBtn.textContent = 'Retry Grading';
     respEl.disabled = false;
     document.getElementById('frq-next').classList.remove('hidden');
   }
+}
+
+function renderGradingError(err) {
+  const code = err && err.code;
+  const msg = (err && err.message) || 'Unknown error';
+
+  if (code === 'missing_api_key') {
+    return `<div class="frq-grade-error">
+      <div class="frq-grade-error-title">Grading not configured</div>
+      <p>The server is missing the <code>ANTHROPIC_API_KEY</code> environment variable. An admin needs to add it:</p>
+      <ol>
+        <li>Open the project in Vercel &rarr; <strong>Settings</strong> &rarr; <strong>Environment Variables</strong>.</li>
+        <li>Add a new variable with name <code>ANTHROPIC_API_KEY</code> and value from console.anthropic.com.</li>
+        <li>Apply to Production (and Preview), then redeploy.</li>
+      </ol>
+      <p class="frq-grade-error-detail">${escapeHtml(msg)}</p>
+    </div>`;
+  }
+  if (code === 'missing_db' || code === 'missing_tables') {
+    return `<div class="frq-grade-error">
+      <div class="frq-grade-error-title">Database not set up</div>
+      <p>The grading tables do not exist yet. An admin should hit <code>/api/setup</code> once to create them.</p>
+      <p class="frq-grade-error-detail">${escapeHtml(msg)}</p>
+    </div>`;
+  }
+  if (code === 'anthropic_error') {
+    return `<div class="frq-grade-error">
+      <div class="frq-grade-error-title">Claude API error</div>
+      <p>The grading model returned an error. This is usually rate limiting, a bad API key, or an invalid model name.</p>
+      <p class="frq-grade-error-detail">${escapeHtml(msg)}</p>
+      <p class="frq-grade-error-hint">You can retry, or view the model answer below.</p>
+    </div>`;
+  }
+  if (code === 'parse_error') {
+    return `<div class="frq-grade-error">
+      <div class="frq-grade-error-title">Grader returned malformed output</div>
+      <p>The grading model returned text we could not parse as JSON. Try again.</p>
+      <p class="frq-grade-error-detail">${escapeHtml(msg)}</p>
+    </div>`;
+  }
+  return `<div class="frq-grade-error">
+    <div class="frq-grade-error-title">Grading failed</div>
+    <p class="frq-grade-error-detail">${escapeHtml(msg)}</p>
+    <p class="frq-grade-error-hint">You can retry, or view the model answer below.</p>
+  </div>`;
 }
 
 function colorForPct(pct) {

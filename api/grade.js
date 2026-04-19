@@ -28,6 +28,36 @@ async function requireUser(req, sql) {
   return sessions[0].user_id;
 }
 
+async function ensureTables(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS frq_rubrics (
+      question_id TEXT PRIMARY KEY,
+      subject TEXT NOT NULL,
+      frq_type TEXT NOT NULL,
+      unit_code TEXT,
+      rubric_json JSONB NOT NULL,
+      model_answer TEXT,
+      source TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS frq_gradings (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      question_id TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      frq_type TEXT,
+      student_response TEXT NOT NULL,
+      rubric_snapshot JSONB,
+      grade_json JSONB NOT NULL,
+      total_score NUMERIC,
+      max_score NUMERIC,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+}
+
 async function resolveRubric({ sql, question_id, subject, frq_type, unit_code, units, prompt_text, stimulus, documents, upstream_rubric, upstream_model_answer }) {
   const cached = await sql`
     SELECT rubric_json, model_answer, source FROM frq_rubrics WHERE question_id = ${question_id}
@@ -72,7 +102,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(503).json({
+      error: 'Grading is not configured on the server. The ANTHROPIC_API_KEY environment variable is missing. Add it to your Vercel project (Settings -> Environment Variables) and redeploy.',
+      code: 'missing_api_key',
+    });
+  }
+  if (!process.env.DATABASE_URL) {
+    return res.status(503).json({ error: 'DATABASE_URL is not configured on the server.', code: 'missing_db' });
+  }
+
   const sql = neon(process.env.DATABASE_URL);
+  try { await ensureTables(sql); } catch (e) { console.error('ensureTables failed:', e.message); }
+
   const userId = await requireUser(req, sql);
   if (!userId) return res.status(401).json({ error: 'Not logged in' });
 
@@ -172,6 +214,12 @@ export default async function handler(req, res) {
     return res.status(200).json({ grade, rubric, model_answer, rubric_source: source });
   } catch (err) {
     console.error('grade error:', err);
-    return res.status(500).json({ error: err.message });
+    const msg = err && err.message ? err.message : String(err);
+    let code = 'grade_failed';
+    if (/ANTHROPIC_API_KEY/i.test(msg)) code = 'missing_api_key';
+    else if (/Anthropic API error/i.test(msg)) code = 'anthropic_error';
+    else if (/parse JSON/i.test(msg)) code = 'parse_error';
+    else if (/relation.*does not exist/i.test(msg)) code = 'missing_tables';
+    return res.status(500).json({ error: msg, code });
   }
 }
