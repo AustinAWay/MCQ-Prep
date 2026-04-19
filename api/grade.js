@@ -172,7 +172,7 @@ export default async function handler(req, res) {
       `Grade this student's response according to the rubric and scored sample reference calibration. ` +
       `Return ONLY the JSON object specified in the system prompt's OUTPUT FORMAT — no prose, no markdown fences.`;
 
-    const grade = await callClaudeJson({ systemPrompt, userMessage, maxTokens: 4000 });
+    const grade = await callClaudeJson({ systemPrompt, userMessage, maxTokens: 8000 });
 
     const totalScore = typeof grade.total_score === 'number' ? grade.total_score : null;
     const maxScore = typeof grade.max_score === 'number' ? grade.max_score : null;
@@ -218,7 +218,9 @@ export default async function handler(req, res) {
     let code = 'grade_failed';
     if (/ANTHROPIC_API_KEY/i.test(msg)) code = 'missing_api_key';
     else if (/Anthropic API error/i.test(msg)) code = 'anthropic_error';
-    else if (/parse JSON/i.test(msg)) code = 'parse_error';
+    else if (/truncated at max_tokens/i.test(msg)) code = 'truncated';
+    else if (/invalid JSON|parse JSON/i.test(msg)) code = 'parse_error';
+    else if (/timed out/i.test(msg)) code = 'timeout';
     else if (/relation.*does not exist/i.test(msg)) code = 'missing_tables';
     return res.status(500).json({ error: msg, code });
   }

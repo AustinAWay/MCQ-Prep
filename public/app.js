@@ -1055,7 +1055,21 @@ function renderGradingError(err) {
   if (code === 'parse_error') {
     return `<div class="frq-grade-error">
       <div class="frq-grade-error-title">Grader returned malformed output</div>
-      <p>The grading model returned text we could not parse as JSON. Try again.</p>
+      <p>The grading model returned text we could not parse as JSON. This usually means the response was cut off mid-sentence. Try again — it rarely repeats.</p>
+      <p class="frq-grade-error-detail">${escapeHtml(msg)}</p>
+    </div>`;
+  }
+  if (code === 'truncated') {
+    return `<div class="frq-grade-error">
+      <div class="frq-grade-error-title">Grader response was too long</div>
+      <p>Claude ran out of output tokens before finishing the rubric. Retry — if this keeps happening, the prompt needs to be shortened server-side.</p>
+      <p class="frq-grade-error-detail">${escapeHtml(msg)}</p>
+    </div>`;
+  }
+  if (code === 'timeout') {
+    return `<div class="frq-grade-error">
+      <div class="frq-grade-error-title">Grader timed out</div>
+      <p>Claude took longer than the serverless function's time budget. Retry — responses vary.</p>
       <p class="frq-grade-error-detail">${escapeHtml(msg)}</p>
     </div>`;
   }

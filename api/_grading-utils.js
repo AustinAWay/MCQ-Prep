@@ -137,14 +137,84 @@ export function parseJsonFromText(text) {
   try {
     return JSON.parse(s);
   } catch {
+    // Scope to the first { ... } we can find.
     const first = s.indexOf('{');
     const last = s.lastIndexOf('}');
-    if (first !== -1 && last !== -1 && last > first) {
-      const slice = s.slice(first, last + 1);
+    if (first === -1) throw new Error('Could not parse JSON from LLM response');
+    let slice = s.slice(first, last > first ? last + 1 : undefined);
+
+    try {
       return JSON.parse(slice);
+    } catch {
+      // Try to repair truncated JSON by closing open structures.
+      const repaired = repairTruncatedJson(slice);
+      if (repaired) {
+        try { return JSON.parse(repaired); } catch {}
+      }
+      throw new Error(
+        'LLM returned invalid JSON (likely truncated mid-response). Try again; if it keeps happening the response is too long for the token budget.'
+      );
     }
-    throw new Error('Could not parse JSON from LLM response');
   }
+}
+
+// Best-effort repair of JSON truncated mid-token. Walks the string tracking
+// string/object/array nesting and appends whatever closers are needed.
+function repairTruncatedJson(s) {
+  if (!s) return null;
+  let inStr = false;
+  let escape = false;
+  const stack = [];
+  let lastCompleteValueEnd = -1; // byte after a comma/key-value where reopening is safe
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (escape) { escape = false; continue; }
+      if (c === '\\') { escape = true; continue; }
+      if (c === '"') { inStr = false; }
+      continue;
+    }
+    if (c === '"') { inStr = true; continue; }
+    if (c === '{' || c === '[') { stack.push(c); continue; }
+    if (c === '}' || c === ']') { stack.pop(); continue; }
+    if (c === ',' && stack.length > 0) lastCompleteValueEnd = i;
+  }
+
+  let out = s;
+  // Close a dangling string by dropping the trailing content back to the last
+  // comma/structure boundary, which is safer than inventing content.
+  if (inStr) {
+    if (lastCompleteValueEnd >= 0) {
+      out = s.slice(0, lastCompleteValueEnd);
+    } else {
+      return null;
+    }
+  } else if (stack.length > 0) {
+    // If we ended right after a comma with nothing following, strip it.
+    out = out.replace(/,\s*$/, '');
+  }
+
+  // Re-walk stack for the possibly-trimmed output and append closers.
+  const open = [];
+  let inStr2 = false, esc2 = false;
+  for (let i = 0; i < out.length; i++) {
+    const c = out[i];
+    if (inStr2) {
+      if (esc2) { esc2 = false; continue; }
+      if (c === '\\') { esc2 = true; continue; }
+      if (c === '"') inStr2 = false;
+      continue;
+    }
+    if (c === '"') { inStr2 = true; continue; }
+    if (c === '{' || c === '[') open.push(c);
+    else if (c === '}' || c === ']') open.pop();
+  }
+  if (inStr2) return null; // still unbalanced strings, give up
+  for (let i = open.length - 1; i >= 0; i--) {
+    out += open[i] === '{' ? '}' : ']';
+  }
+  return out;
 }
 
 // Default grading model. Haiku 4.5 is ~3x faster than Sonnet at structured,
@@ -193,6 +263,13 @@ export async function callClaude({ systemPrompt, userMessage, maxTokens = 3500, 
   const data = await res.json();
   const block = (data.content || []).find(c => c.type === 'text');
   if (!block || !block.text) throw new Error('Anthropic response missing text content');
+  if (data.stop_reason === 'max_tokens') {
+    // Attach a marker so the caller can differentiate truncation from malformed output.
+    const err = new Error(`Anthropic response truncated at max_tokens (${maxTokens}). Raise max_tokens or shorten the prompt.`);
+    err.truncated = true;
+    err.partialText = block.text;
+    throw err;
+  }
   return block.text;
 }
 
