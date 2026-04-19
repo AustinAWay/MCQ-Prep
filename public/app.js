@@ -850,35 +850,47 @@ function renderFRQ() {
 
   const stimEl = document.getElementById('frq-stimulus');
 
-  if (docs.length > 0) {
+  const hasDocs = docs.length > 0;
+  const hasStim = !!(stim && stim.content);
+
+  if (hasDocs || hasStim) {
     stimEl.style.display = '';
     let html = '';
-    for (const doc of docs) {
-      html += `<div class="frq-document">`;
-      html += `<div class="frq-doc-header">Document ${doc.doc_number || ''}</div>`;
-      if (doc.title || doc.author || doc.date) {
-        let meta = '';
-        if (doc.title) meta += `<strong>${escapeHtml(doc.title)}</strong>`;
-        if (doc.author) meta += (meta ? ' — ' : '') + escapeHtml(doc.author);
-        if (doc.date) meta += (meta ? ', ' : '') + escapeHtml(doc.date);
-        html += `<div class="frq-doc-meta">${meta}</div>`;
+    if (hasDocs) {
+      for (const doc of docs) {
+        html += `<div class="frq-document">`;
+        html += `<div class="frq-doc-header">Document ${doc.doc_number || ''}</div>`;
+        if (doc.title || doc.author || doc.date) {
+          let meta = '';
+          if (doc.title) meta += `<strong>${escapeHtml(doc.title)}</strong>`;
+          if (doc.author) meta += (meta ? ' — ' : '') + escapeHtml(doc.author);
+          if (doc.date) meta += (meta ? ', ' : '') + escapeHtml(doc.date);
+          html += `<div class="frq-doc-meta">${meta}</div>`;
+        }
+        if (doc.content) {
+          const chartData = tryParseChartJson(doc.content);
+          if (chartData) {
+            const chartId = 'frq-doc-chart-' + frqIndex + '-' + (doc.doc_number || Math.random().toString(36).slice(2, 7));
+            setTimeout(() => renderChart(chartId, chartData), 50);
+            html += chartData.title ? `<div class="stimulus-chart-title">${escapeHtml(chartData.title)}</div>` : '';
+            html += `<canvas id="${chartId}" class="stimulus-chart-canvas"></canvas>`;
+          } else if (/<table|<tr|<div/i.test(doc.content)) {
+            html += `<div class="frq-doc-content">${doc.content}</div>`;
+          } else if (doc.content.includes('|') && doc.content.includes('\n')) {
+            html += `<div class="frq-doc-content">${renderMarkdownTable(doc.content)}</div>`;
+          } else {
+            html += `<div class="frq-doc-content">${escapeHtml(doc.content)}</div>`;
+          }
+        }
+        if (doc.source_ref || doc.attribution) {
+          html += `<div class="stimulus-attribution">${escapeHtml(doc.source_ref || doc.attribution)}</div>`;
+        }
+        html += `</div>`;
       }
-      if (doc.content) {
-        html += `<div class="frq-doc-content">${escapeHtml(doc.content)}</div>`;
-      }
-      if (doc.source_ref || doc.attribution) {
-        html += `<div class="stimulus-attribution">${escapeHtml(doc.source_ref || doc.attribution)}</div>`;
-      }
-      html += `</div>`;
+    } else if (hasStim) {
+      html += renderStimulus(stim);
     }
     stimEl.innerHTML = html;
-  } else if (stim && stim.content) {
-    stimEl.style.display = '';
-    const content = stim.content || '';
-    const attribution = stim.source_attribution || stim.source_ref || '';
-    let rendered = (content.includes('<table') || content.includes('<tr') || content.includes('<div')) ? content : escapeHtml(content);
-    stimEl.innerHTML = `<div class="stimulus-content">${rendered}</div>
-      ${attribution ? `<div class="stimulus-attribution">${escapeHtml(attribution)}</div>` : ''}`;
   } else {
     stimEl.innerHTML = '';
     stimEl.style.display = 'none';
