@@ -757,6 +757,8 @@ let frqIndex = 0;
 let frqCourseKey = null;
 let frqSeenIds = new Set();
 let frqChosenType = null;
+let lastGradeRubric = null;
+let lastGradeModelAnswer = null;
 
 const FRQ_TYPE_INFO = {
   frq_short: { name: 'Short Answer (SAQ)', desc: 'Brief responses to 2-3 part questions using historical evidence.' },
@@ -843,6 +845,9 @@ function renderFRQ() {
   const stim = item.stimulus || (item.stimulus_id && frqStimuli[item.stimulus_id]) || null;
   const docs = item.documents || [];
 
+  // Warm up the rubric so it's cached by the time the student submits.
+  warmRubric(item, stim, docs);
+
   const stimEl = document.getElementById('frq-stimulus');
 
   if (docs.length > 0) {
@@ -883,20 +888,221 @@ function renderFRQ() {
   const stemHtml = escapeHtml(stemText).replace(/\n/g, '<br>').replace(/•/g, '<br>•');
   document.getElementById('frq-prompt').innerHTML = stemHtml;
 
-  document.getElementById('frq-response').value = '';
+  lastGradeRubric = null;
+  lastGradeModelAnswer = null;
+  const respEl = document.getElementById('frq-response');
+  respEl.value = '';
+  respEl.disabled = false;
+  const submitBtn = document.getElementById('frq-submit');
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit for Grading';
+    submitBtn.classList.remove('hidden');
+  }
   document.getElementById('frq-show-answer').classList.remove('hidden');
   document.getElementById('frq-model-answer').classList.add('hidden');
+  const grading = document.getElementById('frq-grading');
+  if (grading) {
+    grading.classList.add('hidden');
+    document.getElementById('frq-grading-result').innerHTML = '';
+    document.getElementById('frq-grading-loading').classList.add('hidden');
+  }
   document.getElementById('frq-next').classList.add('hidden');
+}
+
+function buildRubricPayload(item, stim, docs) {
+  const course = COURSES[frqCourseKey];
+  return {
+    question_id: item.id,
+    subject: course ? course.subject : '',
+    frq_type: frqChosenType || item.item_type || 'frq_short',
+    unit_code: item.unit_code || null,
+    units: item.unit_code ? [item.unit_code] : [],
+    prompt_text: item.stem || '',
+    stem: item.stem || '',
+    stimulus: stim || null,
+    documents: docs || [],
+    upstream_rubric: Array.isArray(item.rubric) ? item.rubric : null,
+    upstream_model_answer: item.model_answer || null,
+  };
+}
+
+function warmRubric(item, stim, docs) {
+  if (!item || !item.id) return;
+  const payload = buildRubricPayload(item, stim, docs);
+  fetch('/api/rubric', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch(() => {});
+}
+
+async function submitFRQForGrading() {
+  const item = frqItems[frqIndex];
+  if (!item) return;
+  const respEl = document.getElementById('frq-response');
+  const response = (respEl.value || '').trim();
+  if (!response) {
+    alert('Please write a response before submitting.');
+    return;
+  }
+
+  const stim = item.stimulus || (item.stimulus_id && frqStimuli[item.stimulus_id]) || null;
+  const docs = item.documents || [];
+
+  respEl.disabled = true;
+  const submitBtn = document.getElementById('frq-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Grading...';
+
+  const gradingEl = document.getElementById('frq-grading');
+  const loadingEl = document.getElementById('frq-grading-loading');
+  const resultEl = document.getElementById('frq-grading-result');
+  gradingEl.classList.remove('hidden');
+  loadingEl.classList.remove('hidden');
+  resultEl.innerHTML = '';
+
+  const payload = {
+    ...buildRubricPayload(item, stim, docs),
+    topic_code: item.topic_code || null,
+    difficulty: item.difficulty || null,
+    student_response: response,
+  };
+
+  try {
+    const res = await fetch('/api/grade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error || `Grading failed (${res.status})`);
+    }
+    const data = await res.json();
+    lastGradeRubric = data.rubric || null;
+    lastGradeModelAnswer = data.model_answer || null;
+    loadingEl.classList.add('hidden');
+    resultEl.innerHTML = renderGrading(data.grade);
+    document.getElementById('frq-next').classList.remove('hidden');
+    submitBtn.classList.add('hidden');
+  } catch (err) {
+    loadingEl.classList.add('hidden');
+    resultEl.innerHTML = `<div class="frq-grade-error">Grading failed: ${escapeHtml(err.message)}. You can still view the model answer.</div>`;
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Retry Grading';
+    respEl.disabled = false;
+    document.getElementById('frq-next').classList.remove('hidden');
+  }
+}
+
+function colorForPct(pct) {
+  if (pct >= 80) return 'green';
+  if (pct >= 50) return 'yellow';
+  return 'red';
+}
+
+function renderGrading(grade) {
+  if (!grade) return '<div class="frq-grade-error">No grading returned.</div>';
+
+  if (grade.context_sufficient === false) {
+    return `<div class="frq-grade-error">Grading incomplete: ${escapeHtml(grade.missing_context || 'insufficient context')}.</div>`;
+  }
+
+  const total = typeof grade.total_score === 'number' ? grade.total_score : null;
+  const max = typeof grade.max_score === 'number' ? grade.max_score : null;
+  const pct = (total !== null && max) ? Math.round((total / max) * 100) : null;
+  const color = pct !== null ? colorForPct(pct) : 'yellow';
+
+  let html = '<div class="frq-grade">';
+  html += `<div class="frq-grade-header">
+    <div class="frq-grade-score ${color}">
+      <span class="frq-grade-num">${total !== null ? total : '?'}</span>
+      <span class="frq-grade-slash">/</span>
+      <span class="frq-grade-max">${max !== null ? max : '?'}</span>
+    </div>
+    <div class="frq-grade-meta">
+      <div class="frq-grade-type">${grade.question_type ? escapeHtml(grade.question_type.toUpperCase()) : 'FRQ'}</div>
+      ${pct !== null ? `<div class="frq-grade-pct">${pct}%</div>` : ''}
+    </div>
+  </div>`;
+
+  const items = Array.isArray(grade.parts) ? grade.parts : (Array.isArray(grade.rows) ? grade.rows : []);
+  const isParts = Array.isArray(grade.parts);
+
+  if (items.length > 0) {
+    html += '<div class="frq-grade-items">';
+    for (const it of items) {
+      const label = isParts
+        ? `Part (${it.part || ''})`
+        : (it.label || it.row_id || 'Row');
+      const score = typeof it.score === 'number' ? it.score : (it.earned ? 1 : 0);
+      const rowMax = typeof it.max_score === 'number' ? it.max_score : 1;
+      const earned = score > 0;
+      const full = rowMax > 0 && score >= rowMax;
+      const badgeClass = full ? 'full' : (earned ? 'partial' : 'none');
+      html += `<div class="frq-grade-item">
+        <div class="frq-grade-item-head">
+          <span class="frq-grade-item-label">${escapeHtml(label)}</span>
+          <span class="frq-grade-badge ${badgeClass}">${score} / ${rowMax}</span>
+        </div>`;
+      if (it.task_verb) {
+        html += `<div class="frq-grade-verb">Task verb: <em>${escapeHtml(it.task_verb)}</em></div>`;
+      }
+      if (it.rubric_requirement) {
+        html += `<div class="frq-grade-sect"><span class="frq-grade-sect-label">Rubric requires:</span> ${escapeHtml(it.rubric_requirement)}</div>`;
+      }
+      if (it.student_quote) {
+        const quote = Array.isArray(it.student_quote) ? it.student_quote.join(' / ') : it.student_quote;
+        html += `<details class="frq-grade-details"><summary>Student quote</summary><div class="frq-grade-quote">${escapeHtml(quote)}</div></details>`;
+      }
+      if (it.reasoning) {
+        html += `<div class="frq-grade-sect"><span class="frq-grade-sect-label">Reasoning:</span> ${escapeHtml(it.reasoning)}</div>`;
+      }
+      if (it.college_board_justification) {
+        html += `<details class="frq-grade-details"><summary>College Board alignment</summary><div class="frq-grade-para">${escapeHtml(it.college_board_justification)}</div></details>`;
+      }
+      if (it.precedent) {
+        html += `<details class="frq-grade-details"><summary>Scored-sample precedent</summary><div class="frq-grade-para">${escapeHtml(it.precedent)}</div></details>`;
+      }
+      if (it.remediation) {
+        html += `<div class="frq-grade-remed"><span class="frq-grade-sect-label">To earn this point:</span> ${escapeHtml(it.remediation)}</div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  const oa = grade.overall_analysis;
+  if (oa && typeof oa === 'object') {
+    html += '<div class="frq-grade-overall"><h3>Overall analysis</h3>';
+    if (oa.strengths) html += `<div class="frq-grade-sect"><span class="frq-grade-sect-label">Strengths:</span> ${escapeHtml(oa.strengths)}</div>`;
+    if (oa.critical_gaps) html += `<div class="frq-grade-sect"><span class="frq-grade-sect-label">Critical gaps:</span> ${escapeHtml(oa.critical_gaps)}</div>`;
+    if (oa.performance_level) html += `<div class="frq-grade-sect"><span class="frq-grade-sect-label">Performance level:</span> ${escapeHtml(oa.performance_level)}</div>`;
+    if (oa.skill_recommendations) html += `<div class="frq-grade-sect"><span class="frq-grade-sect-label">Recommendations:</span> ${escapeHtml(oa.skill_recommendations)}</div>`;
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
 }
 
 function showFRQAnswer() {
   const item = frqItems[frqIndex];
+  const modelAnswer = item.model_answer || lastGradeModelAnswer || '';
+  const rubric = (Array.isArray(item.rubric) && item.rubric.length > 0) ? item.rubric
+               : (Array.isArray(lastGradeRubric) ? lastGradeRubric : null);
+
   let modelHtml = '';
-  if (item.model_answer) modelHtml += `<div class="frq-model-text">${escapeHtml(item.model_answer)}</div>`;
-  if (item.rubric && Array.isArray(item.rubric)) {
+  if (modelAnswer) modelHtml += `<div class="frq-model-text">${escapeHtml(modelAnswer)}</div>`;
+  if (rubric) {
     modelHtml += '<div class="frq-rubric">';
-    for (const r of item.rubric) {
-      modelHtml += `<div class="frq-rubric-point"><strong>Point ${r.point}:</strong> ${escapeHtml(r.criteria || '')}</div>`;
+    for (const r of rubric) {
+      const header = r.point
+        ? `Point ${escapeHtml(String(r.point))}`
+        : (r.label ? escapeHtml(r.label) : (r.row_id ? escapeHtml(r.row_id) : 'Rubric'));
+      const scoreSuffix = typeof r.max_score === 'number' ? ` (${r.max_score} pt${r.max_score === 1 ? '' : 's'})` : '';
+      modelHtml += `<div class="frq-rubric-point"><strong>${header}${scoreSuffix}:</strong> ${escapeHtml(r.criteria || '')}</div>`;
       if (r.exemplar) modelHtml += `<div class="frq-rubric-exemplar">${escapeHtml(r.exemplar)}</div>`;
     }
     modelHtml += '</div>';

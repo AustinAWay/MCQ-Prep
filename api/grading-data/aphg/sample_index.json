@@ -1,0 +1,482 @@
+[
+  {
+    "filename": "2021_set1_q1.md",
+    "year": 2021,
+    "set": 1,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      5,
+      1,
+      7
+    ],
+    "concepts": [
+      "economies of scale are used to maximize profitability in dairy farming",
+      "a recent trend in the location of dairy farms with respect to consumer locations",
+      "intensive agriculture",
+      "the change over time in the numbers and sizes of family-run dairy farms"
+    ]
+  },
+  {
+    "filename": "2021_set1_q2.md",
+    "year": 2021,
+    "set": 1,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      6,
+      1,
+      3
+    ],
+    "concepts": [
+      "the world city concept in the context of globalization",
+      "one difference between world cities and metacities"
+    ]
+  },
+  {
+    "filename": "2021_set1_q3.md",
+    "year": 2021,
+    "set": 1,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      4,
+      1,
+      7
+    ],
+    "concepts": [
+      "the concept of a supranational organization"
+    ]
+  },
+  {
+    "filename": "2021_set2_q1.md",
+    "year": 2021,
+    "set": 2,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      2,
+      7,
+      1
+    ],
+    "concepts": [
+      "one difference between the total fertility rate and the rate of natural increase",
+      "access to specialized women\u2019s health care (i",
+      "one economic reason why governments enact pronatalist policies",
+      "total fertility rate"
+    ]
+  },
+  {
+    "filename": "2021_set2_q2.md",
+    "year": 2021,
+    "set": 2,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      3,
+      1,
+      2
+    ],
+    "concepts": [
+      "one contemporary reason why people in china and india are learning english",
+      "one barrier to the diffusion of english throughout china",
+      "one historical reason for india\u2019s current number of english speakers"
+    ]
+  },
+  {
+    "filename": "2021_set2_q3.md",
+    "year": 2021,
+    "set": 2,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      7,
+      1,
+      2
+    ],
+    "concepts": [
+      "special economic zones (sezs)",
+      "one reason for the spatial patterns identified from the map and data table",
+      "the spatial pattern of the clusters located on the map",
+      "one economic policy attracts foreign investments in china\u2019s sezs"
+    ]
+  },
+  {
+    "filename": "2022_set1_q1.md",
+    "year": 2022,
+    "set": 1,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      5,
+      7,
+      1
+    ],
+    "concepts": []
+  },
+  {
+    "filename": "2022_set1_q2.md",
+    "year": 2022,
+    "set": 1,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      6,
+      2,
+      1
+    ],
+    "concepts": []
+  },
+  {
+    "filename": "2022_set1_q3.md",
+    "year": 2022,
+    "set": 1,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      4,
+      3,
+      1
+    ],
+    "concepts": [
+      "the type of political boundaries shown in map 1"
+    ]
+  },
+  {
+    "filename": "2022_set2_q1.md",
+    "year": 2022,
+    "set": 2,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      2,
+      1,
+      7
+    ],
+    "concepts": [
+      "the informal economy"
+    ]
+  },
+  {
+    "filename": "2022_set2_q2.md",
+    "year": 2022,
+    "set": 2,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      1,
+      7,
+      5
+    ],
+    "concepts": [
+      "one reason a country\u2019s percentage of forest cover may change"
+    ]
+  },
+  {
+    "filename": "2022_set2_q3.md",
+    "year": 2022,
+    "set": 2,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      4,
+      1,
+      6
+    ],
+    "concepts": [
+      "one possible benefit of devolution for northern ireland",
+      "one type of cultural difference shown in map 2"
+    ]
+  },
+  {
+    "filename": "2023_set1_q1.md",
+    "year": 2023,
+    "set": 1,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      2,
+      4,
+      1
+    ],
+    "concepts": [
+      "how a country may have a negative rni"
+    ]
+  },
+  {
+    "filename": "2023_set1_q2.md",
+    "year": 2023,
+    "set": 1,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      5,
+      3,
+      7
+    ],
+    "concepts": [
+      "food preferences can be a culture trait",
+      "the concept of an early hearth of domestication"
+    ]
+  },
+  {
+    "filename": "2023_set1_q3.md",
+    "year": 2023,
+    "set": 1,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      7,
+      6,
+      1
+    ],
+    "concepts": [
+      "one way local economic changes may be a result of deindustrialization",
+      "the spatial pattern of the companies and institutions shown in the inset map",
+      "the pattern shown on the map resembles the galactic city model",
+      "the concept of a growth pole"
+    ]
+  },
+  {
+    "filename": "2023_set2_q1.md",
+    "year": 2023,
+    "set": 2,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      4,
+      1,
+      6
+    ],
+    "concepts": [
+      "territoriality in terms of political geography",
+      "the concept of sovereignty as it relates to the state"
+    ]
+  },
+  {
+    "filename": "2023_set2_q2.md",
+    "year": 2023,
+    "set": 2,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      7,
+      2,
+      1
+    ],
+    "concepts": []
+  },
+  {
+    "filename": "2023_set2_q3.md",
+    "year": 2023,
+    "set": 2,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      5,
+      3,
+      1
+    ],
+    "concepts": [
+      "pastoral nomadism may affect the cultural landscape of the sahel region",
+      "one reason for the migration patterns shown on the map",
+      "one cause of desertification in the sahel region",
+      "one way mixed-crop farming could be affected by climatic conditions"
+    ]
+  },
+  {
+    "filename": "2024_set1_q1.md",
+    "year": 2024,
+    "set": 1,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      5,
+      2,
+      1
+    ],
+    "concepts": [
+      "carrying capacity"
+    ]
+  },
+  {
+    "filename": "2024_set1_q2.md",
+    "year": 2024,
+    "set": 1,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      3,
+      4,
+      1
+    ],
+    "concepts": [
+      "the spatial pattern of chinese ethnic neighborhoods labeled on the map"
+    ]
+  },
+  {
+    "filename": "2024_set1_q3.md",
+    "year": 2024,
+    "set": 1,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      6,
+      7,
+      1
+    ],
+    "concepts": [
+      "one reason why migrants to metacities may have difficulty obtaining housing",
+      "one city on the map that is both a metacity and a world city",
+      "the spatial pattern of world cities shown on the map"
+    ]
+  },
+  {
+    "filename": "2024_set2_q1.md",
+    "year": 2024,
+    "set": 2,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      3,
+      1,
+      4
+    ],
+    "concepts": [
+      "the process of creolization of language",
+      "one type of diffusion by which culture traits spread"
+    ]
+  },
+  {
+    "filename": "2024_set2_q2.md",
+    "year": 2024,
+    "set": 2,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      4,
+      6,
+      1
+    ],
+    "concepts": [
+      "one site characteristic of washington, d",
+      "one type of boundary shown on the map"
+    ]
+  },
+  {
+    "filename": "2024_set2_q3.md",
+    "year": 2024,
+    "set": 2,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      2,
+      7,
+      1
+    ],
+    "concepts": [
+      "one likely economic effect when countries have negative population growth",
+      "a pronatalist policy"
+    ]
+  },
+  {
+    "filename": "2025_set1_q1.md",
+    "year": 2025,
+    "set": 1,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      7,
+      4,
+      1
+    ],
+    "concepts": [
+      "one purpose of supranational organizations",
+      "deindustrialization has affected the economy of core countries",
+      "an independent state",
+      "one global outcome of an increase in international trade"
+    ]
+  },
+  {
+    "filename": "2025_set1_q2.md",
+    "year": 2025,
+    "set": 1,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      2,
+      6,
+      1
+    ],
+    "concepts": [
+      "the recent trend in fertility shown in the population pyramid",
+      "one process that drives urbanization"
+    ]
+  },
+  {
+    "filename": "2025_set1_q3.md",
+    "year": 2025,
+    "set": 1,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      5,
+      3,
+      1
+    ],
+    "concepts": [
+      "the globalization of agriculture may affect local culture traits",
+      "the spatial pattern of cow\u2019s milk production in africa, shown in map 1",
+      "an example of a culture trait"
+    ]
+  },
+  {
+    "filename": "2025_set2_q1.md",
+    "year": 2025,
+    "set": 2,
+    "question": 1,
+    "question_type": "no_stimulus",
+    "units": [
+      6,
+      4,
+      7
+    ],
+    "concepts": [
+      "migration may affect a city\u2019s economy",
+      "one type of voluntary migration",
+      "one type of housing discrimination that may occur in urban areas"
+    ]
+  },
+  {
+    "filename": "2025_set2_q2.md",
+    "year": 2025,
+    "set": 2,
+    "question": 2,
+    "question_type": "one_stimulus",
+    "units": [
+      7,
+      5,
+      2
+    ],
+    "concepts": [
+      "comparative advantage"
+    ]
+  },
+  {
+    "filename": "2025_set2_q3.md",
+    "year": 2025,
+    "set": 2,
+    "question": 3,
+    "question_type": "two_stimuli",
+    "units": [
+      4,
+      3,
+      1
+    ],
+    "concepts": [
+      "one function of internal boundaries",
+      "geometric boundaries as shown in map 1",
+      "the scale of analysis used for finland\u2019s political divisions in map 2"
+    ]
+  }
+]

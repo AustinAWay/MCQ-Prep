@@ -53,6 +53,35 @@ export default async function handler(req, res) {
       END $$
     `;
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS frq_rubrics (
+        question_id TEXT PRIMARY KEY,
+        subject TEXT NOT NULL,
+        frq_type TEXT NOT NULL,
+        unit_code TEXT,
+        rubric_json JSONB NOT NULL,
+        model_answer TEXT,
+        source TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS frq_gradings (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        question_id TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        frq_type TEXT,
+        student_response TEXT NOT NULL,
+        rubric_snapshot JSONB,
+        grade_json JSONB NOT NULL,
+        total_score NUMERIC,
+        max_score NUMERIC,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
     return res.status(200).json({ ok: true, message: 'Tables created' });
   } catch (err) {
     return res.status(500).json({ error: err.message });

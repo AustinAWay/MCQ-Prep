@@ -2,5 +2,9 @@
   "outputDirectory": "public",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" }
-  ]
+  ],
+  "functions": {
+    "api/grade.js":  { "includeFiles": "api/grading-data/**" },
+    "api/rubric.js": { "includeFiles": "api/grading-data/**" }
+  }
 }
