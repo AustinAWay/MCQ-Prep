@@ -138,28 +138,42 @@ export function parseJsonFromText(text) {
 }
 
 // Call the Anthropic Messages API and return the raw text of the first content block.
-export async function callClaude({ systemPrompt, userMessage, maxTokens = 4000, model = 'claude-sonnet-4-5' }) {
+export async function callClaude({ systemPrompt, userMessage, maxTokens = 4000, model = 'claude-sonnet-4-5', timeoutMs = 55000 }) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error(`Anthropic API timed out after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw new Error(`Anthropic request failed: ${e.message}`);
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Anthropic API error ${res.status}: ${errText}`);
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Anthropic API error ${res.status}: ${errText.slice(0, 400)}`);
   }
   const data = await res.json();
   const block = (data.content || []).find(c => c.type === 'text');

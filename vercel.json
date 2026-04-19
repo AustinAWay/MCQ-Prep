@@ -4,7 +4,7 @@
     { "source": "/api/:path*", "destination": "/api/:path*" }
   ],
   "functions": {
-    "api/grade.js":  { "includeFiles": "api/grading-data/**" },
-    "api/rubric.js": { "includeFiles": "api/grading-data/**" }
+    "api/grade.js":  { "includeFiles": "api/grading-data/**", "maxDuration": 60, "memory": 1024 },
+    "api/rubric.js": { "includeFiles": "api/grading-data/**", "maxDuration": 60, "memory": 1024 }
   }
 }

@@ -80,10 +80,10 @@ async function resolveRubric({ sql, question_id, subject, frq_type, unit_code, u
   const systemPrompt = loadSystemPrompt(subject) +
     '\n\n---\n\nFOR THIS REQUEST you are NOT grading a student response. You are generating a RUBRIC only. ' +
     'Return a JSON object with "rubric" (array of rows/parts matching the rubric structure for this FRQ type) and "model_answer" (a full-credit example). Output only JSON.';
-  const samples = pickSamples({ subject, frqType: frq_type, units: units || (unit_code ? [unit_code] : []), max: 2, perSampleCharCap: 10000 });
+  const samples = pickSamples({ subject, frqType: frq_type, units: units || (unit_code ? [unit_code] : []), max: 1, perSampleCharCap: 6000 });
   const qctx = buildQuestionContext({ promptText: prompt_text, stimulus, documents });
   const userMessage = `${samples}\n\n${qctx}\n\nGenerate the rubric JSON now. Output only the JSON object.`;
-  const generated = await callClaudeJson({ systemPrompt, userMessage, maxTokens: 2500 });
+  const generated = await callClaudeJson({ systemPrompt, userMessage, maxTokens: 2000 });
 
   const rubric = generated.rubric || generated;
   const modelAnswer = generated.model_answer || null;
@@ -159,8 +159,8 @@ export default async function handler(req, res) {
       subject,
       frqType: frq_type,
       units: units || (unit_code ? [unit_code] : []),
-      max: 3,
-      perSampleCharCap: 12000,
+      max: 2,
+      perSampleCharCap: 6000,
     });
     const qctx = buildQuestionContext({ promptText: prompt_text || stem, stimulus, documents });
 

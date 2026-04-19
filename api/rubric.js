@@ -90,11 +90,11 @@ async function generateRubric({ subject, frqType, units, promptText, stimulus, d
     '\n\n---\n\nFOR THIS REQUEST you are NOT grading a student response. You are generating a RUBRIC only.\n' +
     buildRubricGenerationInstructions(frqType);
 
-  const samples = pickSamples({ subject, frqType, units, max: 2, perSampleCharCap: 10000 });
+  const samples = pickSamples({ subject, frqType, units, max: 1, perSampleCharCap: 6000 });
   const qctx = buildQuestionContext({ promptText, stimulus, documents });
 
   const userMessage = `${samples}\n\n${qctx}\n\nGenerate the rubric JSON now. Output only the JSON object, no other text.`;
-  return callClaudeJson({ systemPrompt, userMessage, maxTokens: 2500 });
+  return callClaudeJson({ systemPrompt, userMessage, maxTokens: 2000 });
 }
 
 async function ensureTables(sql) {
