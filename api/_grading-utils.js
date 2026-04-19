@@ -147,8 +147,13 @@ export function parseJsonFromText(text) {
   }
 }
 
+// Default grading model. Haiku 4.5 is ~3x faster than Sonnet at structured,
+// rubric-driven scoring and comfortably finishes inside Vercel's 60s Hobby
+// limit. Override with ANTHROPIC_MODEL env var (e.g. `claude-sonnet-4-5`).
+const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5';
+
 // Call the Anthropic Messages API and return the raw text of the first content block.
-export async function callClaude({ systemPrompt, userMessage, maxTokens = 4000, model = 'claude-sonnet-4-5', timeoutMs = 55000 }) {
+export async function callClaude({ systemPrompt, userMessage, maxTokens = 3500, model = DEFAULT_MODEL, timeoutMs = 58000 }) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
 
