@@ -1,11 +1,21 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const DATA_ROOT = path.join(__dirname, 'grading-data');
+// On Vercel, `process.cwd()` is the function root ("/var/task") which contains the
+// bundled `api/` directory thanks to vercel.json's `includeFiles`. Locally it is the
+// repo root. We probe a few candidates so both environments work, and avoid
+// `import.meta.url` which breaks when the bundler targets CommonJS.
+const DATA_ROOT = (() => {
+  const candidates = [
+    path.join(process.cwd(), 'api', 'grading-data'),
+    path.join(process.cwd(), 'grading-data'),
+    path.join('/var/task', 'api', 'grading-data'),
+  ];
+  for (const p of candidates) {
+    try { if (fs.existsSync(p)) return p; } catch {}
+  }
+  return candidates[0];
+})();
 
 // subject slug (from upstream) -> data directory key
 const SUBJECT_DIRS = {
